@@ -10,6 +10,8 @@ You MUST respond with valid JSON only. No markdown, no code blocks, no explanati
 
 JSON schema:
 {
+  "ideaName": "<short catchy name for the idea, 2-5 words, like a product name>",
+  "keywords": ["<keyword 1>", "<keyword 2>", "<keyword 3>"],
   "overall": <number 1.0-10.0, one decimal>,
   "categories": [
     { "name": "Market Demand", "score": <1.0-10.0>, "emoji": "📊", "comment": "<1 sentence>" },
@@ -24,6 +26,10 @@ JSON schema:
   "risks": ["<risk 1>", "<risk 2>", "<risk 3>"],
   "nextSteps": ["<concrete action 1>", "<concrete action 2>", "<concrete action 3>"]
 }
+
+Additional field rules:
+- ideaName: A short, catchy name that captures the essence of the idea (e.g. "AI Market Studies", "Smart Meal Planner", "Freelancer CRM"). Think product name, not description.
+- keywords: Exactly 3 single-word or two-word tags that describe the idea's key attributes (e.g. ["AI-Powered", "B2B", "Scalable"] or ["SaaS", "Education", "Low-Cost"]).
 
 Rules:
 - Be honest and direct. Don't sugarcoat bad ideas.

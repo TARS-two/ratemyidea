@@ -5,6 +5,8 @@ import { Lang, t } from "./i18n";
 
 /* ---------- types ---------- */
 interface ScoreResult {
+  ideaName: string;
+  keywords: string[];
   overall: number;
   categories: {
     name: string;
@@ -171,48 +173,77 @@ export default function HomeClient() {
     }
   }
 
-  function getShareUrl() {
-    if (!result) return "https://ratemyidea.ai";
-    const scoreStr = result.overall.toFixed(1);
-    const params = new URLSearchParams({ score: scoreStr });
-    if (!hideIdea) {
-      params.set("summary", result.summary.slice(0, 120));
-    } else {
+  function getOgImageUrl() {
+    if (!result) return "/api/og";
+    const params = new URLSearchParams({ score: result.overall.toFixed(1) });
+    if (result.keywords?.length) params.set("keywords", result.keywords.join(","));
+    if (hideIdea) {
       params.set("hidden", "1");
+    } else if (result.ideaName) {
+      params.set("name", result.ideaName);
     }
-    return `https://ratemyidea.ai?${params.toString()}`;
+    return `/api/og?${params.toString()}`;
   }
 
   function getShareText() {
     if (!result) return "";
     const scoreStr = result.overall.toFixed(1);
     return lang === "es"
-      ? `Acabo de evaluar mi idea de negocio y obtuve ${scoreStr}/10 🧠`
-      : `I just rated my business idea and got ${scoreStr}/10 🧠`;
+      ? `Acabo de evaluar mi idea de negocio y obtuve ${scoreStr}/10 🧠\n\nEvalúa la tuya gratis → ratemyidea.ai`
+      : `I just rated my business idea and got ${scoreStr}/10 🧠\n\nRate yours free → ratemyidea.ai`;
   }
 
-  function handleCopyLink() {
-    const url = getShareUrl();
-    navigator.clipboard.writeText(url);
+  async function handleDownloadImage() {
+    try {
+      const res = await fetch(getOgImageUrl());
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ratemyidea-${result?.overall.toFixed(1) || "score"}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // fallback: open in new tab
+      window.open(getOgImageUrl(), "_blank");
+    }
+  }
+
+  async function handleShareNative() {
+    try {
+      const res = await fetch(getOgImageUrl());
+      const blob = await res.blob();
+      const file = new File([blob], "ratemyidea.png", { type: "image/png" });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          text: getShareText(),
+          files: [file],
+        });
+        return;
+      }
+    } catch {
+      // fallback below
+    }
+    // Fallback: copy text
+    navigator.clipboard.writeText(getShareText());
     setShared(true);
     setTimeout(() => setShared(false), 2000);
   }
 
   function handleShareTwitter() {
     const text = encodeURIComponent(getShareText());
-    const url = encodeURIComponent(getShareUrl());
-    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank");
+    window.open(`https://twitter.com/intent/tweet?text=${text}`, "_blank");
   }
 
   function handleShareWhatsApp() {
-    const text = encodeURIComponent(`${getShareText()}\n${getShareUrl()}`);
+    const text = encodeURIComponent(getShareText());
     window.open(`https://wa.me/?text=${text}`, "_blank");
   }
 
-  function handleShareNative() {
-    if (navigator.share) {
-      navigator.share({ text: getShareText(), url: getShareUrl() });
-    }
+  function handleCopyText() {
+    navigator.clipboard.writeText(getShareText());
+    setShared(true);
+    setTimeout(() => setShared(false), 2000);
   }
 
   function handleReset() {
@@ -518,48 +549,16 @@ export default function HomeClient() {
               </button>
             </div>
 
-            {/* OG Image Preview */}
+            {/* Real OG Image Preview */}
             <div className="px-6 pb-4">
-              <div className="rounded-2xl overflow-hidden border border-white/10 bg-[var(--midnight)]">
-                {/* Mini preview of the share card */}
-                <div className="aspect-[1200/630] flex flex-col items-center justify-center p-6 relative"
-                  style={{
-                    background: "linear-gradient(135deg, #0F0F1A 0%, #1A1A2E 50%, #0F0F1A 100%)",
-                    backgroundImage: "linear-gradient(135deg, #0F0F1A 0%, #1A1A2E 50%, #0F0F1A 100%), linear-gradient(rgba(108,58,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(108,58,255,0.06) 1px, transparent 1px)",
-                    backgroundSize: "100% 100%, 30px 30px, 30px 30px",
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-2xl">🧠</span>
-                    <span className="font-bold text-base text-[var(--text-primary)]">Rate My Idea</span>
-                  </div>
-                  <div
-                    className="w-20 h-20 rounded-full flex items-center justify-center mb-3"
-                    style={{
-                      border: `4px solid ${result.overall >= 7.5 ? "var(--accent-green)" : result.overall >= 5 ? "var(--accent-yellow)" : "var(--accent-red)"}`,
-                      background: "rgba(22,22,42,0.8)",
-                    }}
-                  >
-                    <span
-                      className="text-2xl font-extrabold"
-                      style={{
-                        color: result.overall >= 7.5 ? "var(--accent-green)" : result.overall >= 5 ? "var(--accent-yellow)" : "var(--accent-red)",
-                      }}
-                    >
-                      {result.overall.toFixed(1)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-[var(--text-secondary)] text-center max-w-[80%] line-clamp-2">
-                    {hideIdea
-                      ? (lang === "es" ? `Un emprendedor obtuvo ${result.overall.toFixed(1)}/10 — ¡evalúa tu idea gratis!` : `An entrepreneur scored ${result.overall.toFixed(1)}/10 — rate your idea free!`)
-                      : result.summary.slice(0, 120)}
-                  </p>
-                  <div className="absolute bottom-2 flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
-                    <span>ratemyidea.ai</span>
-                    <span style={{ color: "var(--electric)" }}>•</span>
-                    <span>by AI Norte</span>
-                  </div>
-                </div>
+              <div className="rounded-2xl overflow-hidden border border-white/10">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  key={hideIdea ? "hidden" : "visible"}
+                  src={getOgImageUrl()}
+                  alt="Share card preview"
+                  className="w-full aspect-[1200/630] object-cover"
+                />
               </div>
             </div>
 
@@ -587,34 +586,41 @@ export default function HomeClient() {
 
             {/* Share buttons */}
             <div className="px-6 pb-6 space-y-2">
+              {/* Primary: Download image */}
               <button
-                onClick={handleCopyLink}
+                onClick={handleDownloadImage}
                 className="w-full py-3 bg-[var(--electric)] hover:bg-[var(--electric-dark)] text-white font-semibold rounded-xl transition-all cursor-pointer"
               >
-                {shared ? `✓ ${s.copied}` : `🔗 ${s.copyLink}`}
+                ⬇️ {s.downloadImage}
               </button>
-              <div className="grid grid-cols-2 gap-2">
+              {/* Secondary row */}
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={handleShareTwitter}
                   className="py-2.5 bg-[var(--surface-light)] border border-white/10 rounded-xl text-sm text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
                 >
-                  𝕏 Twitter
+                  𝕏
                 </button>
                 <button
                   onClick={handleShareWhatsApp}
                   className="py-2.5 bg-[var(--surface-light)] border border-white/10 rounded-xl text-sm text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
                 >
-                  💬 WhatsApp
+                  💬
+                </button>
+                <button
+                  onClick={handleCopyText}
+                  className="py-2.5 bg-[var(--surface-light)] border border-white/10 rounded-xl text-sm text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
+                >
+                  {shared ? "✓" : "📋"}
                 </button>
               </div>
-              {typeof navigator !== "undefined" && !!navigator.share && (
-                <button
-                  onClick={handleShareNative}
-                  className="w-full py-2.5 bg-[var(--surface-light)] border border-white/10 rounded-xl text-sm text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
-                >
-                  📱 {s.moreOptions}
-                </button>
-              )}
+              {/* Native share (mobile) */}
+              <button
+                onClick={handleShareNative}
+                className="w-full py-2.5 bg-[var(--surface-light)] border border-white/10 rounded-xl text-sm text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer sm:hidden"
+              >
+                📱 {s.moreOptions}
+              </button>
             </div>
           </div>
         </div>

@@ -21,6 +21,7 @@ export const t = {
     strengths: "Strengths",
     risks: "Risks",
     nextSteps: "Next Steps",
+    sources: "Sources",
     upsellTitle: "Want the full market study?",
     upsellDesc:
       "Competitors, market size, pricing strategy, audience profile, and a go-to-market plan — delivered as a PDF.",
@@ -63,6 +64,7 @@ export const t = {
     strengths: "Fortalezas",
     risks: "Riesgos",
     nextSteps: "Próximos Pasos",
+    sources: "Fuentes",
     upsellTitle: "¿Quieres el estudio de mercado completo?",
     upsellDesc:
       "Competidores, tamaño de mercado, estrategia de precios, perfil de audiencia y un plan de lanzamiento — entregado en PDF.",

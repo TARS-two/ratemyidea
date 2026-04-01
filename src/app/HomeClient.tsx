@@ -4,6 +4,12 @@ import { useState, useEffect, FormEvent, useRef } from "react";
 import { Lang, t } from "./i18n";
 
 /* ---------- types ---------- */
+interface Source {
+  title: string;
+  url: string;
+  domain: string;
+}
+
 interface ScoreResult {
   ideaName: string;
   keywords: string[];
@@ -18,6 +24,7 @@ interface ScoreResult {
   strengths: string[];
   risks: string[];
   nextSteps: string[];
+  sources: Source[];
 }
 
 /* ---------- score ring ---------- */
@@ -474,6 +481,36 @@ export default function HomeClient() {
                   ))}
                 </ol>
               </div>
+
+              {/* Sources */}
+              {result.sources && result.sources.length > 0 && (
+                <div className="bg-[var(--surface)] border border-white/10 rounded-2xl p-6">
+                  <h3 className="font-semibold text-[var(--text-secondary)] mb-3">
+                    📚 {s.sources}
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {result.sources.map((source, i) => (
+                      <a
+                        key={i}
+                        href={source.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-light)] border border-white/5 rounded-full text-xs text-[var(--text-secondary)] hover:border-[var(--electric)]/40 hover:text-[var(--electric-light)] transition-all"
+                      >
+                        <img
+                          src={`https://www.google.com/s2/favicons?domain=${source.domain}&sz=16`}
+                          alt=""
+                          className="w-3.5 h-3.5 rounded-sm"
+                        />
+                        <span className="font-medium">{source.domain}</span>
+                        <span className="text-[var(--text-muted)] max-w-[180px] truncate hidden sm:inline">
+                          — {source.title}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Upsell */}
               <div className="bg-gradient-to-r from-[var(--electric)]/20 to-purple-500/20 border border-[var(--electric)]/30 rounded-2xl p-6 text-center">

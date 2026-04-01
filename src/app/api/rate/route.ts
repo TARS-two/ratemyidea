@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { searchWeb, formatSearchContext, formatSourcesForClient } from "./search";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const BEEHIIV_API_KEY = process.env.BEEHIIV_API_KEY;
@@ -40,7 +41,9 @@ Rules:
 - Next steps should be concrete, actionable things the person can do THIS WEEK.
 - If the idea is vague, score lower on feasibility and note they need more specificity.
 - Respond in the same language the idea is written in (English or Spanish).
-- If a preferred language is specified, always respond in that language regardless of the input language.`;
+- If a preferred language is specified, always respond in that language regardless of the input language.
+- When REAL-WORLD RESEARCH is provided, USE IT to back up your analysis. Reference specific data points, market sizes, competitor names, and trends from the research. This makes your analysis credible and grounded in reality, not just opinion.
+- Weave the research findings naturally into your category comments, summary, strengths, and risks. Don't just list facts — analyze them in context of the idea.`;
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,7 +72,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call Claude API
+    // Step 1: Research the idea with web search
+    const searchQueries = [
+      `${idea.trim().slice(0, 100)} market size competitors`,
+      `${idea.trim().slice(0, 100)} industry trends 2024 2025`,
+    ];
+    const searchResults = await Promise.all(
+      searchQueries.map((q) => searchWeb(q, 5))
+    );
+    const allResults = searchResults.flat();
+    // Deduplicate by URL
+    const seen = new Set<string>();
+    const uniqueResults = allResults.filter((r) => {
+      if (seen.has(r.url)) return false;
+      seen.add(r.url);
+      return true;
+    });
+    const searchContext = formatSearchContext(uniqueResults);
+    const sources = formatSourcesForClient(uniqueResults);
+
+    // Step 2: Call Claude API with research context
     const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -79,12 +101,12 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 1024,
+        max_tokens: 1500,
         system: SYSTEM_PROMPT,
         messages: [
           {
             role: "user",
-            content: `${lang === "es" ? "[Respond in Spanish]\n\n" : "[Respond in English]\n\n"}Rate this business idea:\n\n${idea.trim()}`,
+            content: `${lang === "es" ? "[Respond in Spanish]\n\n" : "[Respond in English]\n\n"}Rate this business idea:\n\n${idea.trim()}${searchContext}`,
           },
         ],
       }),
@@ -146,6 +168,9 @@ export async function POST(request: NextRequest) {
         console.error("Beehiiv subscription error:", err);
       }
     }
+
+    // Attach sources to the response
+    parsed.sources = sources;
 
     return NextResponse.json(parsed);
   } catch (err) {

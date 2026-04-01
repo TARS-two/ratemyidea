@@ -103,12 +103,14 @@ export function formatSearchContext(results: SearchResult[]): string {
 }
 
 export function formatSourcesForClient(results: SearchResult[]): { title: string; url: string; domain: string }[] {
-  return results
-    .filter((r) => isDomainTrusted(r.url))
-    .slice(0, 6)
-    .map((r) => ({
-      title: r.title.slice(0, 80),
-      url: r.url,
-      domain: r.domain,
-    }));
+  // Prioritize trusted sources, then fill with others (excluding spam)
+  const SPAM_DOMAINS = new Set(["reddit.com", "quora.com", "medium.com", "pinterest.com", "youtube.com"]);
+  const trusted = results.filter((r) => isDomainTrusted(r.url));
+  const other = results.filter((r) => !isDomainTrusted(r.url) && !SPAM_DOMAINS.has(r.domain));
+  const combined = [...trusted, ...other].slice(0, 6);
+  return combined.map((r) => ({
+    title: r.title.slice(0, 80),
+    url: r.url,
+    domain: r.domain,
+  }));
 }

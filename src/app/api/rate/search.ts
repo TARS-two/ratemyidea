@@ -1,4 +1,5 @@
-// Lightweight web research using DuckDuckGo HTML (no API key needed)
+// Web research using Serper.dev Google Search API (2,500 free credits)
+// Falls back gracefully if no API key or credits exhausted
 
 interface SearchResult {
   title: string;
@@ -33,9 +34,7 @@ const TRUSTED_DOMAINS = new Set([
 
 function extractDomain(url: string): string {
   try {
-    const hostname = new URL(url).hostname.replace(/^www\./, "");
-    // Check both full hostname and parent domain
-    return hostname;
+    return new URL(url).hostname.replace(/^www\./, "");
   } catch {
     return "";
   }
@@ -44,7 +43,6 @@ function extractDomain(url: string): string {
 function isDomainTrusted(url: string): boolean {
   const hostname = extractDomain(url);
   if (TRUSTED_DOMAINS.has(hostname)) return true;
-  // Check parent domain (e.g., "news.bbc.com" → "bbc.com")
   const parts = hostname.split(".");
   if (parts.length > 2) {
     const parent = parts.slice(-2).join(".");
@@ -53,66 +51,41 @@ function isDomainTrusted(url: string): boolean {
   return false;
 }
 
+const SERPER_API_KEY = process.env.SERPER_API_KEY;
+
 export async function searchWeb(query: string, maxResults: number = 8): Promise<SearchResult[]> {
+  if (!SERPER_API_KEY) {
+    console.warn("No SERPER_API_KEY — skipping web research");
+    return [];
+  }
+
   try {
-    const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-    const res = await fetch(url, {
+    const res = await fetch("https://google.serper.dev/search", {
+      method: "POST",
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; RateMyIdea/1.0)",
+        "X-API-KEY": SERPER_API_KEY,
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        q: query,
+        num: maxResults,
+      }),
     });
 
-    if (!res.ok) return [];
-
-    const html = await res.text();
-    const results: SearchResult[] = [];
-
-    // Parse DDG HTML results
-    const resultBlocks = html.split('class="result__body"');
-    for (let i = 1; i < resultBlocks.length && results.length < maxResults * 2; i++) {
-      const block = resultBlocks[i];
-
-      // Extract URL
-      const urlMatch = block.match(/href="\/\/duckduckgo\.com\/l\/\?uddg=([^&"]+)/);
-      const directUrlMatch = block.match(/class="result__url"[^>]*href="([^"]+)"/);
-      let resultUrl = "";
-      if (urlMatch) {
-        resultUrl = decodeURIComponent(urlMatch[1]);
-      } else if (directUrlMatch) {
-        resultUrl = directUrlMatch[1];
-        if (resultUrl.startsWith("//")) resultUrl = "https:" + resultUrl;
-      }
-
-      // Extract title
-      const titleMatch = block.match(/class="result__a"[^>]*>([^<]+)</);
-      const title = titleMatch ? titleMatch[1].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').trim() : "";
-
-      // Extract snippet
-      const snippetMatch = block.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/a>/);
-      const snippet = snippetMatch
-        ? snippetMatch[1].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').trim()
-        : "";
-
-      if (resultUrl && title) {
-        results.push({
-          title,
-          url: resultUrl,
-          snippet,
-          domain: extractDomain(resultUrl),
-        });
-      }
+    if (!res.ok) {
+      console.error("Serper API error:", res.status);
+      return [];
     }
 
-    // Filter to trusted sources, then take top results
-    const trusted = results.filter((r) => isDomainTrusted(r.url));
+    const data = await res.json();
+    const organic = data.organic || [];
 
-    // If we have enough trusted results, use them; otherwise mix in top results
-    if (trusted.length >= 3) {
-      return trusted.slice(0, maxResults);
-    }
-
-    // Fallback: return trusted + some non-trusted (but mark them)
-    return [...trusted, ...results.filter((r) => !isDomainTrusted(r.url))].slice(0, maxResults);
+    return organic.map((r: { title?: string; link?: string; snippet?: string }) => ({
+      title: r.title || "",
+      url: r.link || "",
+      snippet: r.snippet || "",
+      domain: extractDomain(r.link || ""),
+    }));
   } catch (err) {
     console.error("Search error:", err);
     return [];

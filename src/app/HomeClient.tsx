@@ -247,6 +247,11 @@ export default function HomeClient() {
     window.open(`https://wa.me/?text=${text}`, "_blank");
   }
 
+  function handleShareLinkedIn() {
+    const url = encodeURIComponent("https://ratemyidea.ai");
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, "_blank");
+  }
+
   function handleCopyText() {
     navigator.clipboard.writeText(getShareText());
     setShared(true);
@@ -619,7 +624,7 @@ export default function HomeClient() {
             </div>
 
             {/* Share buttons — clean grid */}
-            <div className="px-5 pb-5 grid grid-cols-4 gap-2">
+            <div className="px-5 pb-5 grid grid-cols-5 gap-1.5">
               <button
                 onClick={handleDownloadImage}
                 className="flex flex-col items-center gap-1 py-3 bg-[var(--surface-light)] border border-white/10 rounded-xl text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
@@ -632,7 +637,7 @@ export default function HomeClient() {
                 className="flex flex-col items-center gap-1 py-3 bg-[var(--surface-light)] border border-white/10 rounded-xl text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
               >
                 <span className="text-lg">{shared ? "✅" : "📋"}</span>
-                <span className="text-[10px] text-[var(--text-muted)]">{shared ? (lang === "es" ? "Copiado" : "Copied") : (lang === "es" ? "Copiar" : "Copy")}</span>
+                <span className="text-[10px] text-[var(--text-muted)]">{shared ? (lang === "es" ? "Listo" : "Done") : (lang === "es" ? "Copiar" : "Copy")}</span>
               </button>
               <button
                 onClick={handleShareTwitter}
@@ -647,6 +652,13 @@ export default function HomeClient() {
               >
                 <span className="text-lg">💬</span>
                 <span className="text-[10px] text-[var(--text-muted)]">WhatsApp</span>
+              </button>
+              <button
+                onClick={handleShareLinkedIn}
+                className="flex flex-col items-center gap-1 py-3 bg-[var(--surface-light)] border border-white/10 rounded-xl text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
+              >
+                <span className="text-lg">💼</span>
+                <span className="text-[10px] text-[var(--text-muted)]">LinkedIn</span>
               </button>
             </div>
           </div>

@@ -5,9 +5,9 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const score = searchParams.get("score");
   const hidden = searchParams.get("hidden") === "1";
-  const rawSummary = searchParams.get("summary") || "AI-powered business idea validation";
-  const summary = hidden
-    ? `An entrepreneur scored ${score || "?"}/10 — rate your idea free!`
+  const rawSummary = searchParams.get("summary");
+  const summary = hidden || !rawSummary
+    ? (score ? `An entrepreneur scored ${score}/10 — rate your idea free!` : "AI-powered business idea validation. Free. Instant.")
     : rawSummary;
 
   const scoreNum = score ? parseFloat(score) : null;

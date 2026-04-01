@@ -116,6 +116,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [shared, setShared] = useState(false);
   const [hideIdea, setHideIdea] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
 
   const s = t[lang];
@@ -170,27 +171,47 @@ export default function Home() {
     }
   }
 
-  function handleShare() {
-    if (!result) return;
+  function getShareUrl() {
+    if (!result) return "https://ratemyidea.ai";
     const scoreStr = result.overall.toFixed(1);
-    const displaySummary = hideIdea
-      ? s.hiddenSummary
-      : result.summary.slice(0, 200);
-    const summaryEncoded = encodeURIComponent(displaySummary);
-    const hiddenParam = hideIdea ? "&hidden=1" : "";
-    const shareUrl = `https://ratemyidea.ai?score=${scoreStr}&summary=${summaryEncoded}${hiddenParam}`;
-
-    const text =
-      lang === "es"
-        ? `Acabo de evaluar mi idea de negocio en Rate My Idea y obtuve un ${scoreStr}/10! 🧠\n\nPruébalo gratis → ${shareUrl}`
-        : `I just rated my business idea on Rate My Idea and got a ${scoreStr}/10! 🧠\n\nTry it free → ${shareUrl}`;
-
-    if (navigator.share) {
-      navigator.share({ text, url: shareUrl });
+    const params = new URLSearchParams({ score: scoreStr });
+    if (!hideIdea) {
+      params.set("summary", result.summary.slice(0, 120));
     } else {
-      navigator.clipboard.writeText(text);
-      setShared(true);
-      setTimeout(() => setShared(false), 2000);
+      params.set("hidden", "1");
+    }
+    return `https://ratemyidea.ai?${params.toString()}`;
+  }
+
+  function getShareText() {
+    if (!result) return "";
+    const scoreStr = result.overall.toFixed(1);
+    return lang === "es"
+      ? `Acabo de evaluar mi idea de negocio y obtuve ${scoreStr}/10 🧠`
+      : `I just rated my business idea and got ${scoreStr}/10 🧠`;
+  }
+
+  function handleCopyLink() {
+    const url = getShareUrl();
+    navigator.clipboard.writeText(url);
+    setShared(true);
+    setTimeout(() => setShared(false), 2000);
+  }
+
+  function handleShareTwitter() {
+    const text = encodeURIComponent(getShareText());
+    const url = encodeURIComponent(getShareUrl());
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank");
+  }
+
+  function handleShareWhatsApp() {
+    const text = encodeURIComponent(`${getShareText()}\n${getShareUrl()}`);
+    window.open(`https://wa.me/?text=${text}`, "_blank");
+  }
+
+  function handleShareNative() {
+    if (navigator.share) {
+      navigator.share({ text: getShareText(), url: getShareUrl() });
     }
   }
 
@@ -440,33 +461,12 @@ export default function Home() {
               </div>
 
               {/* Share + Try Again */}
-              <div className="space-y-3">
-                {/* Hide idea toggle */}
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <div className="relative">
-                    <input
-                      type="checkbox"
-                      checked={hideIdea}
-                      onChange={(e) => setHideIdea(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-[var(--surface-light)] border border-white/10 rounded-full peer-checked:bg-[var(--electric)] transition-colors" />
-                    <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-[var(--text-primary)] group-hover:text-[var(--electric-light)] transition-colors">
-                      🔒 {s.hideIdea}
-                    </span>
-                    <p className="text-xs text-[var(--text-muted)]">{s.hideIdeaHint}</p>
-                  </div>
-                </label>
-              </div>
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
-                  onClick={handleShare}
+                  onClick={() => setShowShareModal(true)}
                   className="flex-1 py-3 bg-[var(--surface)] border border-white/10 rounded-xl text-[var(--text-primary)] font-medium hover:border-[var(--electric)]/50 transition-all cursor-pointer"
                 >
-                  {shared ? `✓ ${s.copied}` : `📤 ${s.shareScore}`}
+                  📤 {s.shareScore}
                 </button>
                 <button
                   onClick={handleReset}
@@ -497,6 +497,128 @@ export default function Home() {
           )}
         </div>
       </main>
+
+      {/* Share Modal */}
+      {showShareModal && result && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowShareModal(false);
+          }}
+        >
+          <div className="bg-[var(--surface)] border border-white/10 rounded-3xl w-full max-w-md overflow-hidden animate-fade-up">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pt-5 pb-3">
+              <h3 className="font-semibold text-lg">{s.shareScore}</h3>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer text-xl leading-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* OG Image Preview */}
+            <div className="px-6 pb-4">
+              <div className="rounded-2xl overflow-hidden border border-white/10 bg-[var(--midnight)]">
+                {/* Mini preview of the share card */}
+                <div className="aspect-[1200/630] flex flex-col items-center justify-center p-6 relative"
+                  style={{
+                    background: "linear-gradient(135deg, #0F0F1A 0%, #1A1A2E 50%, #0F0F1A 100%)",
+                    backgroundImage: "linear-gradient(135deg, #0F0F1A 0%, #1A1A2E 50%, #0F0F1A 100%), linear-gradient(rgba(108,58,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(108,58,255,0.06) 1px, transparent 1px)",
+                    backgroundSize: "100% 100%, 30px 30px, 30px 30px",
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-2xl">🧠</span>
+                    <span className="font-bold text-base text-[var(--text-primary)]">Rate My Idea</span>
+                  </div>
+                  <div
+                    className="w-20 h-20 rounded-full flex items-center justify-center mb-3"
+                    style={{
+                      border: `4px solid ${result.overall >= 7.5 ? "var(--accent-green)" : result.overall >= 5 ? "var(--accent-yellow)" : "var(--accent-red)"}`,
+                      background: "rgba(22,22,42,0.8)",
+                    }}
+                  >
+                    <span
+                      className="text-2xl font-extrabold"
+                      style={{
+                        color: result.overall >= 7.5 ? "var(--accent-green)" : result.overall >= 5 ? "var(--accent-yellow)" : "var(--accent-red)",
+                      }}
+                    >
+                      {result.overall.toFixed(1)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--text-secondary)] text-center max-w-[80%] line-clamp-2">
+                    {hideIdea
+                      ? (lang === "es" ? `Un emprendedor obtuvo ${result.overall.toFixed(1)}/10 — ¡evalúa tu idea gratis!` : `An entrepreneur scored ${result.overall.toFixed(1)}/10 — rate your idea free!`)
+                      : result.summary.slice(0, 120)}
+                  </p>
+                  <div className="absolute bottom-2 flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+                    <span>ratemyidea.ai</span>
+                    <span style={{ color: "var(--electric)" }}>•</span>
+                    <span>by AI Norte</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Hide idea toggle */}
+            <div className="px-6 pb-4">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={hideIdea}
+                    onChange={(e) => setHideIdea(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-[var(--surface-light)] border border-white/10 rounded-full peer-checked:bg-[var(--electric)] transition-colors" />
+                  <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-[var(--text-primary)] group-hover:text-[var(--electric-light)] transition-colors">
+                    🔒 {s.hideIdea}
+                  </span>
+                  <p className="text-xs text-[var(--text-muted)]">{s.hideIdeaHint}</p>
+                </div>
+              </label>
+            </div>
+
+            {/* Share buttons */}
+            <div className="px-6 pb-6 space-y-2">
+              <button
+                onClick={handleCopyLink}
+                className="w-full py-3 bg-[var(--electric)] hover:bg-[var(--electric-dark)] text-white font-semibold rounded-xl transition-all cursor-pointer"
+              >
+                {shared ? `✓ ${s.copied}` : `🔗 ${s.copyLink}`}
+              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={handleShareTwitter}
+                  className="py-2.5 bg-[var(--surface-light)] border border-white/10 rounded-xl text-sm text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
+                >
+                  𝕏 Twitter
+                </button>
+                <button
+                  onClick={handleShareWhatsApp}
+                  className="py-2.5 bg-[var(--surface-light)] border border-white/10 rounded-xl text-sm text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
+                >
+                  💬 WhatsApp
+                </button>
+              </div>
+              {typeof navigator !== "undefined" && !!navigator.share && (
+                <button
+                  onClick={handleShareNative}
+                  className="w-full py-2.5 bg-[var(--surface-light)] border border-white/10 rounded-xl text-sm text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
+                >
+                  📱 {s.moreOptions}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="py-8 px-6 border-t border-white/5">

@@ -8,7 +8,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Rate My Idea — AI-Powered Business Idea Validator",
+  title: {
+    default: "Rate My Idea — AI-Powered Business Idea Validator",
+    template: "%s",
+  },
   description:
     "Get an instant AI score for your business idea. Free analysis of market potential, competition, and viability in seconds.",
   keywords: [
@@ -19,28 +22,7 @@ export const metadata: Metadata = {
     "market validation",
     "idea rater",
   ],
-  openGraph: {
-    title: "Rate My Idea — Is Your Business Idea Any Good?",
-    description:
-      "Get an instant AI score for your business idea. Free market analysis in seconds.",
-    type: "website",
-    url: "https://ratemyidea.ai",
-    images: [
-      {
-        url: "https://ratemyidea.ai/api/og",
-        width: 1200,
-        height: 630,
-        alt: "Rate My Idea — AI-Powered Business Idea Validator",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Rate My Idea — AI Business Idea Validator",
-    description:
-      "Get an instant AI score for your business idea. Free analysis in seconds.",
-    images: ["https://ratemyidea.ai/api/og"],
-  },
+  metadataBase: new URL("https://ratemyidea.ai"),
 };
 
 export default function RootLayout({

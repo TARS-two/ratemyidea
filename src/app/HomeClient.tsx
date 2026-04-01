@@ -574,7 +574,7 @@ export default function HomeClient() {
             if (e.target === e.currentTarget) setShowShareModal(false);
           }}
         >
-          <div className="bg-[var(--surface)] border border-white/10 rounded-3xl w-full max-w-md overflow-hidden animate-fade-up">
+          <div className="bg-[var(--surface)] border border-white/10 rounded-3xl w-full max-w-lg overflow-hidden animate-fade-up">
             {/* Header */}
             <div className="flex items-center justify-between px-6 pt-5 pb-3">
               <h3 className="font-semibold text-lg">{s.shareScore}</h3>
@@ -586,21 +586,21 @@ export default function HomeClient() {
               </button>
             </div>
 
-            {/* Real OG Image Preview */}
-            <div className="px-6 pb-4">
+            {/* Real OG Image Preview — large */}
+            <div className="px-4 pb-4">
               <div className="rounded-2xl overflow-hidden border border-white/10">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   key={hideIdea ? "hidden" : "visible"}
                   src={getOgImageUrl()}
                   alt="Share card preview"
-                  className="w-full aspect-[1200/630] object-cover"
+                  className="w-full"
                 />
               </div>
             </div>
 
             {/* Hide idea toggle */}
-            <div className="px-6 pb-4">
+            <div className="px-5 pb-4">
               <label className="flex items-center gap-3 cursor-pointer group">
                 <div className="relative">
                   <input
@@ -612,51 +612,41 @@ export default function HomeClient() {
                   <div className="w-9 h-5 bg-[var(--surface-light)] border border-white/10 rounded-full peer-checked:bg-[var(--electric)] transition-colors" />
                   <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
                 </div>
-                <div>
-                  <span className="text-sm font-medium text-[var(--text-primary)] group-hover:text-[var(--electric-light)] transition-colors">
-                    🔒 {s.hideIdea}
-                  </span>
-                  <p className="text-xs text-[var(--text-muted)]">{s.hideIdeaHint}</p>
-                </div>
+                <span className="text-sm font-medium text-[var(--text-primary)] group-hover:text-[var(--electric-light)] transition-colors">
+                  🔒 {s.hideIdea}
+                </span>
               </label>
             </div>
 
-            {/* Share buttons */}
-            <div className="px-6 pb-6 space-y-2">
-              {/* Primary: Download image */}
+            {/* Share buttons — clean grid */}
+            <div className="px-5 pb-5 grid grid-cols-4 gap-2">
               <button
                 onClick={handleDownloadImage}
-                className="w-full py-3 bg-[var(--electric)] hover:bg-[var(--electric-dark)] text-white font-semibold rounded-xl transition-all cursor-pointer"
+                className="flex flex-col items-center gap-1 py-3 bg-[var(--surface-light)] border border-white/10 rounded-xl text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
               >
-                ⬇️ {s.downloadImage}
+                <span className="text-lg">⬇️</span>
+                <span className="text-[10px] text-[var(--text-muted)]">{lang === "es" ? "Guardar" : "Save"}</span>
               </button>
-              {/* Secondary row */}
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={handleShareTwitter}
-                  className="py-2.5 bg-[var(--surface-light)] border border-white/10 rounded-xl text-sm text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
-                >
-                  𝕏
-                </button>
-                <button
-                  onClick={handleShareWhatsApp}
-                  className="py-2.5 bg-[var(--surface-light)] border border-white/10 rounded-xl text-sm text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
-                >
-                  💬
-                </button>
-                <button
-                  onClick={handleCopyText}
-                  className="py-2.5 bg-[var(--surface-light)] border border-white/10 rounded-xl text-sm text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
-                >
-                  {shared ? "✓" : "📋"}
-                </button>
-              </div>
-              {/* Native share (mobile) */}
               <button
-                onClick={handleShareNative}
-                className="w-full py-2.5 bg-[var(--surface-light)] border border-white/10 rounded-xl text-sm text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer sm:hidden"
+                onClick={handleCopyText}
+                className="flex flex-col items-center gap-1 py-3 bg-[var(--surface-light)] border border-white/10 rounded-xl text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
               >
-                📱 {s.moreOptions}
+                <span className="text-lg">{shared ? "✅" : "📋"}</span>
+                <span className="text-[10px] text-[var(--text-muted)]">{shared ? (lang === "es" ? "Copiado" : "Copied") : (lang === "es" ? "Copiar" : "Copy")}</span>
+              </button>
+              <button
+                onClick={handleShareTwitter}
+                className="flex flex-col items-center gap-1 py-3 bg-[var(--surface-light)] border border-white/10 rounded-xl text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
+              >
+                <span className="text-lg">𝕏</span>
+                <span className="text-[10px] text-[var(--text-muted)]">Twitter</span>
+              </button>
+              <button
+                onClick={handleShareWhatsApp}
+                className="flex flex-col items-center gap-1 py-3 bg-[var(--surface-light)] border border-white/10 rounded-xl text-[var(--text-primary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
+              >
+                <span className="text-lg">💬</span>
+                <span className="text-[10px] text-[var(--text-muted)]">WhatsApp</span>
               </button>
             </div>
           </div>

@@ -64,3 +64,59 @@ body {
     linear-gradient(90deg, rgba(108, 58, 255, 0.03) 1px, transparent 1px);
   background-size: 60px 60px;
 }
+
+/* Print styles for market study PDF download */
+@media print {
+  body {
+    background: white !important;
+    color: #1a1a2e !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  nav, .print\:hidden {
+    display: none !important;
+  }
+  
+  .grid-bg {
+    background: white !important;
+    background-image: none !important;
+  }
+  
+  /* Make cards print-friendly */
+  [class*="bg-[var(--surface)"] {
+    background: #f8f9fa !important;
+    border-color: #e0e0e0 !important;
+  }
+  
+  [class*="bg-[var(--surface-light)"] {
+    background: #f0f1f5 !important;
+  }
+  
+  /* Text colors for print */
+  [class*="text-[var(--text-primary)"] {
+    color: #1a1a2e !important;
+  }
+  
+  [class*="text-[var(--text-secondary)"] {
+    color: #4a4a68 !important;
+  }
+  
+  [class*="text-[var(--text-muted)"] {
+    color: #8b8ba8 !important;
+  }
+  
+  [class*="text-[var(--electric"] {
+    color: #6C3AFF !important;
+  }
+  
+  /* Page breaks */
+  main > div > div {
+    break-inside: avoid;
+  }
+  
+  @page {
+    margin: 0.75in;
+    size: letter;
+  }
+}

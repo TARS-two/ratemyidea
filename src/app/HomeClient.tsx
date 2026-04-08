@@ -2,6 +2,8 @@
 
 import { useState, useEffect, FormEvent, useRef } from "react";
 import { Lang, t } from "./i18n";
+import AuthModal from "@/components/AuthModal";
+import BenchmarkChart from "@/components/BenchmarkChart";
 
 /* ---------- types ---------- */
 interface Source {
@@ -10,10 +12,19 @@ interface Source {
   domain: string;
 }
 
+interface Badge {
+  label: string;
+  emoji: string;
+  color: string;
+  bg: string;
+}
+
 interface ScoreResult {
   ideaName: string;
   keywords: string[];
   overall: number;
+  category: string;
+  badge: Badge;
   categories: {
     name: string;
     score: number;
@@ -25,6 +36,20 @@ interface ScoreResult {
   risks: string[];
   nextSteps: string[];
   sources: Source[];
+}
+
+interface BenchmarkData {
+  percentile: number;
+  totalInCategory: number;
+  category: string;
+  distribution: { range: string; count: number }[];
+  insufficient?: boolean;
+}
+
+interface UserSession {
+  token: string;
+  email: string;
+  isPro: boolean;
 }
 
 /* ---------- score ring ---------- */
@@ -127,20 +152,81 @@ export default function HomeClient() {
   const [hideIdea, setHideIdea] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<"limit" | "upgrade" | "default">("default");
+  const [userSession, setUserSession] = useState<UserSession | null>(null);
+  const [benchmark, setBenchmark] = useState<BenchmarkData | null>(null);
+  const [strategicPlan, setStrategicPlan] = useState<string | null>(null);
+  const [planLoading, setPlanLoading] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
 
   const s = t[lang];
 
-  // Load lang from localStorage on mount
+  // Load lang + session from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem("lang");
     if (saved === "en" || saved === "es") setLang(saved);
+    const savedSession = localStorage.getItem("rmi_session");
+    if (savedSession) {
+      try { setUserSession(JSON.parse(savedSession)); } catch { /* ignore */ }
+    }
   }, []);
 
   function toggleLang() {
     const next = lang === "en" ? "es" : "en";
     setLang(next);
     localStorage.setItem("lang", next);
+  }
+
+  function handleAuthSuccess(token: string, authEmail: string) {
+    const session: UserSession = { token, email: authEmail, isPro: false };
+    setUserSession(session);
+    localStorage.setItem("rmi_session", JSON.stringify(session));
+    setShowAuthModal(false);
+  }
+
+  function handleSignOut() {
+    setUserSession(null);
+    localStorage.removeItem("rmi_session");
+  }
+
+  async function fetchBenchmark(score: number, category: string) {
+    try {
+      const res = await fetch(`/api/benchmark?score=${score}&category=${encodeURIComponent(category)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (!data.insufficient) setBenchmark(data);
+      }
+    } catch { /* non-critical */ }
+  }
+
+  async function handleGeneratePlan() {
+    if (!userSession) {
+      setAuthModalMode("upgrade");
+      setShowAuthModal(true);
+      return;
+    }
+    if (!result) return;
+    setPlanLoading(true);
+    try {
+      const res = await fetch("/api/strategic-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ideaText: idea.trim(),
+          ideaName: result.ideaName,
+          lang,
+          authToken: userSession.token,
+        }),
+      });
+      const data = await res.json();
+      if (data.plan) setStrategicPlan(data.plan);
+      else setError(data.error || "Could not generate plan.");
+    } catch {
+      setError("Could not generate plan. Try again.");
+    } finally {
+      setPlanLoading(false);
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -150,6 +236,8 @@ export default function HomeClient() {
     setLoading(true);
     setError("");
     setResult(null);
+    setBenchmark(null);
+    setStrategicPlan(null);
 
     try {
       const res = await fetch("/api/rate", {
@@ -159,8 +247,20 @@ export default function HomeClient() {
           idea: idea.trim(),
           email: email.trim() || undefined,
           lang,
+          authToken: userSession?.token,
         }),
       });
+
+      if (res.status === 429) {
+        const errData = await res.json().catch(() => ({}));
+        if (errData.error === "limit_reached") {
+          setAuthModalMode("limit");
+          setShowAuthModal(true);
+        } else {
+          setError(errData.message || "Too many requests. Try again later.");
+        }
+        return;
+      }
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -170,7 +270,9 @@ export default function HomeClient() {
       const data = await res.json();
       setResult(data);
 
-      // Scroll to results
+      // Fetch benchmark
+      if (data.category) fetchBenchmark(data.overall, data.category);
+
       setTimeout(() => {
         resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 200);
@@ -300,25 +402,44 @@ export default function HomeClient() {
               {s.brand}
             </span>
           </div>
-          <div className="flex items-center gap-4">
-            {/* Language toggle */}
+          <div className="flex items-center gap-3">
             <button
               onClick={toggleLang}
               className="text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
             >
-              <span className={lang === "en" ? "text-[var(--text-primary)]" : ""}>
-                EN
-              </span>
+              <span className={lang === "en" ? "text-[var(--text-primary)]" : ""}>EN</span>
               <span className="mx-1 text-[var(--text-muted)]">|</span>
-              <span className={lang === "es" ? "text-[var(--text-primary)]" : ""}>
-                ES
-              </span>
+              <span className={lang === "es" ? "text-[var(--text-primary)]" : ""}>ES</span>
             </button>
+
+            {userSession ? (
+              <div className="flex items-center gap-2">
+                {userSession.isPro && (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--electric)]/20 text-[var(--electric-light)]">Pro</span>
+                )}
+                <a href="/history" className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors hidden sm:block">
+                  History
+                </a>
+                <button
+                  onClick={handleSignOut}
+                  className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                >
+                  {userSession.email.split("@")[0]}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setAuthModalMode("default"); setShowAuthModal(true); }}
+                className="text-xs font-medium px-3 py-1.5 bg-[var(--surface)] border border-white/10 rounded-lg text-[var(--text-secondary)] hover:border-[var(--electric)]/50 transition-all cursor-pointer"
+              >
+                {lang === "es" ? "Iniciar sesión" : "Sign in"}
+              </button>
+            )}
+
             <a
               href="https://ai-norte.com"
               className="items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--electric-light)] transition-colors hidden sm:flex"
-              target="_blank"
-              rel="noopener"
+              target="_blank" rel="noopener"
             >
               <span>by</span>
               <img src="/ainorte-logo.svg" alt="AI Norte" className="h-4 w-4" />
@@ -439,6 +560,16 @@ export default function HomeClient() {
                 <p className="text-sm text-[var(--text-muted)] uppercase tracking-wider mb-4">
                   {s.yourScore}
                 </p>
+                {result.badge && (
+                  <div className="flex justify-center mb-4">
+                    <span
+                      className="text-sm font-bold px-4 py-1.5 rounded-full"
+                      style={{ color: result.badge.color, backgroundColor: result.badge.bg, border: `1px solid ${result.badge.color}40` }}
+                    >
+                      {result.badge.emoji} {result.badge.label}
+                    </span>
+                  </div>
+                )}
                 <ScoreRing score={result.overall} />
                 <p className="mt-4 text-[var(--text-secondary)] max-w-md mx-auto">
                   {result.summary}
@@ -539,7 +670,71 @@ export default function HomeClient() {
                 </div>
               )}
 
-              {/* Upsell */}
+              {/* Benchmark */}
+              {benchmark && (
+                <BenchmarkChart data={benchmark} userScore={result.overall} lang={lang} />
+              )}
+
+              {/* Strategic Plan */}
+              {strategicPlan ? (
+                <div className="bg-[var(--surface)] border border-white/10 rounded-2xl p-6">
+                  <h3 className="font-semibold text-[var(--electric-light)] mb-3">
+                    🗓️ {lang === "es" ? "Plan estratégico 30 días" : "30-Day Strategic Plan"}
+                  </h3>
+                  <div className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap leading-relaxed">
+                    {strategicPlan}
+                  </div>
+                </div>
+              ) : userSession?.isPro ? (
+                <div className="bg-[var(--surface)] border border-white/10 rounded-2xl p-6 text-center">
+                  <p className="text-sm text-[var(--text-muted)] mb-3">
+                    {lang === "es" ? "Genera un plan de acción de 30 días para esta idea" : "Generate a 30-day action plan for this idea"}
+                  </p>
+                  <button
+                    onClick={handleGeneratePlan}
+                    disabled={planLoading}
+                    className="px-6 py-2.5 bg-[var(--electric)] hover:bg-[var(--electric-dark)] disabled:opacity-50 text-white font-medium rounded-xl transition-all cursor-pointer text-sm"
+                  >
+                    {planLoading ? "Generating..." : (lang === "es" ? "🗓️ Generar plan 30 días" : "🗓️ Generate 30-day plan")}
+                  </button>
+                </div>
+              ) : null}
+
+              {/* Pro CTA for free users */}
+              {!userSession?.isPro && (
+                <div className="bg-[var(--surface)] border border-[var(--electric)]/20 rounded-2xl p-6">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">⚡</span>
+                    <div className="flex-1">
+                      <h3 className="font-bold mb-1">
+                        {lang === "es" ? "Upgrade a Pro — $9/mes" : "Upgrade to Pro — $9/mo"}
+                      </h3>
+                      <ul className="text-sm text-[var(--text-muted)] space-y-1 mb-4">
+                        <li>✓ {lang === "es" ? "Evaluaciones ilimitadas" : "Unlimited evaluations"}</li>
+                        <li>✓ {lang === "es" ? "Historial de ideas" : "Idea history"}</li>
+                        <li>✓ {lang === "es" ? "5 planes estratégicos 30 días/mes" : "5 strategic plans/month"}</li>
+                        <li>✓ {lang === "es" ? "Benchmark vs otras ideas" : "Benchmark vs other ideas"}</li>
+                      </ul>
+                      <button
+                        onClick={async () => {
+                          const res = await fetch("/api/stripe/subscribe", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ email: userSession?.email || email }),
+                          });
+                          const data = await res.json();
+                          if (data.url) window.location.href = data.url;
+                        }}
+                        className="px-5 py-2.5 bg-[var(--electric)] hover:bg-[var(--electric-dark)] text-white font-semibold rounded-xl transition-all cursor-pointer text-sm"
+                      >
+                        {lang === "es" ? "Activar Pro" : "Get Pro"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Upsell — Market Study */}
               <div className="bg-gradient-to-r from-[var(--electric)]/20 to-purple-500/20 border border-[var(--electric)]/30 rounded-2xl p-6 text-center">
                 <h3 className="font-bold text-lg mb-2">
                   {s.upsellTitle}
@@ -628,6 +823,16 @@ export default function HomeClient() {
           )}
         </div>
       </main>
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={handleAuthSuccess}
+          mode={authModalMode}
+          lang={lang}
+        />
+      )}
 
       {/* Share Modal */}
       {showShareModal && result && (

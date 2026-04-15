@@ -4,6 +4,12 @@ import { useState, useEffect, FormEvent, useRef } from "react";
 import { Lang, t } from "./i18n";
 import AuthModal from "@/components/AuthModal";
 import BenchmarkChart from "@/components/BenchmarkChart";
+import { createClient } from "@supabase/supabase-js"; // Added Supabase client import
+
+// Initialize Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /* ---------- types ---------- */
 interface Source {
@@ -155,6 +161,7 @@ export default function HomeClient() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"limit" | "upgrade" | "default">("default");
   const [userSession, setUserSession] = useState<UserSession | null>(null);
+  const [userProfile, setUserProfile] = useState<any | null>(null); // Added for Supabase user profile
   const [benchmark, setBenchmark] = useState<BenchmarkData | null>(null);
   const [strategicPlan, setStrategicPlan] = useState<string | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
@@ -162,14 +169,50 @@ export default function HomeClient() {
 
   const s = t[lang];
 
-  // Load lang + session from localStorage on mount
+  const isFreeUser = userSession && userProfile && !userProfile.is_pro;
+  const hasSharedTodayForDisplay = userProfile && userProfile.last_share_date
+    ? new Date(userProfile.last_share_date).toDateString() === new Date().toDateString()
+    : false;
+
+  // Load lang + session from localStorage and Supabase on mount
   useEffect(() => {
-    const saved = localStorage.getItem("lang");
-    if (saved === "en" || saved === "es") setLang(saved);
-    const savedSession = localStorage.getItem("rmi_session");
-    if (savedSession) {
-      try { setUserSession(JSON.parse(savedSession)); } catch { /* ignore */ }
+    const savedLang = localStorage.getItem("lang");
+    if (savedLang === "en" || savedLang === "es") setLang(savedLang);
+
+    async function fetchUserAndProfile() {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error("Error fetching Supabase session:", sessionError);
+        return;
+      }
+
+      if (session) {
+        // Update userSession state with the latest from Supabase
+        setUserSession({
+          token: session.access_token,
+          email: session.user.email || "",
+          isPro: false, // This will be updated from profile
+        });
+
+        // Fetch user profile from the database
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_pro, free_evaluations_left, last_share_date')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!profileError && profile) {
+          setUserProfile(profile);
+          // Update isPro in userSession from profile data
+          setUserSession(prev => prev ? { ...prev, isPro: profile.is_pro } : null);
+        } else {
+          console.error('Error fetching user profile:', profileError);
+        }
+      }
     }
+
+    fetchUserAndProfile();
   }, []);
 
   function toggleLang() {
@@ -343,6 +386,44 @@ export default function HomeClient() {
   async function handleShareWithImage(target?: "whatsapp" | "twitter" | "linkedin") {
     const file = await getShareImage();
     const text = getShareText();
+
+    // 1. Call backend to grant credit BEFORE native share
+    if (userSession && userProfile && !userProfile.is_pro) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const lastShareDate = userProfile.last_share_date ? new Date(userProfile.last_share_date) : null;
+      let hasSharedToday = false;
+      if (lastShareDate) {
+          lastShareDate.setHours(0, 0, 0, 0);
+          hasSharedToday = lastShareDate.getTime() === today.getTime();
+      }
+
+      if (!hasSharedToday) {
+        try {
+          const response = await fetch("/api/share-credit", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${userSession.token}`,
+            },
+          });
+          const data = await response.json();
+          if (response.ok) {
+            console.log(data.message);
+            // Update userProfile state to reflect new evaluations or share date
+            setUserProfile(prevProfile => prevProfile ? {
+              ...prevProfile,
+              free_evaluations_left: data.freeEvaluationsLeft !== undefined ? data.freeEvaluationsLeft : prevProfile.free_evaluations_left + 1,
+              last_share_date: new Date().toISOString(),
+            } : null);
+          } else {
+            console.error("Error al otorgar crédito por compartir:", data.error);
+          }
+        } catch (error) {
+          console.error("Error de red al llamar a /api/share-credit:", error);
+        }
+      }
+    }
     
     // Try native share with image (works great on mobile)
     if (file && navigator.share && navigator.canShare?.({ files: [file] })) {
@@ -720,12 +801,12 @@ export default function HomeClient() {
                           const res = await fetch("/api/stripe/subscribe", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ email: userSession?.email || email }),
+                            body: JSON.stringify({ email: userSession?.email || email, lang }), // Added lang to body
                           });
                           const data = await res.json();
                           if (data.url) window.location.href = data.url;
                         }}
-                        className="px-5 py-2.5 bg-[var(--electric)] hover:bg-[var(--electric-dark)] text-white font-semibold rounded-xl transition-all cursor-pointer text-sm"
+                        className="mt-4 mx-auto px-5 py-2.5 bg-[var(--electric)] hover:bg-[var(--electric-dark)] text-white font-semibold rounded-xl transition-all cursor-pointer text-sm block w-fit"
                       >
                         {lang === "es" ? "Activar Pro" : "Get Pro"}
                       </button>
@@ -796,9 +877,22 @@ export default function HomeClient() {
                 </button>
                 <button
                   onClick={handleReset}
-                  className="flex-1 py-3 bg-[var(--surface)] border border-white/10 rounded-xl text-[var(--text-primary)] font-medium hover:border-[var(--electric)]/50 transition-all cursor-pointer"
+                  className={`flex-1 py-3 bg-[var(--surface)] border rounded-xl text-[var(--text-primary)] font-medium transition-all cursor-pointer
+                    ${isFreeUser && userProfile?.free_evaluations_left === 0
+                      ? "border-red-500/20 text-red-400 opacity-60 cursor-not-allowed"
+                      : "border-white/10 hover:border-[var(--electric)]/50"}
+                  `}
+                  disabled={isFreeUser && userProfile?.free_evaluations_left === 0}
                 >
-                  🔄 {s.rateAnother}
+                  <div className="flex items-center justify-center gap-2">
+                    {isFreeUser && userProfile?.free_evaluations_left === 0 ? (
+                      <span className="flex items-center gap-2">
+                        ⚠️ {lang === "es" ? "Límite por día alcanzado" : "Daily limit reached"}
+                      </span>
+                    ) : (
+                      <>🔄 {s.rateAnother}</>
+                    )}
+                  </div>
                 </button>
               </div>
             </div>
@@ -897,6 +991,9 @@ export default function HomeClient() {
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                 {lang === "es" ? "Compartir imagen" : "Share image"}
+                {userProfile && !userProfile.is_pro && !hasSharedTodayForDisplay && (
+                  <span className="text-sm font-medium text-green-500 ml-2">+1 evaluación extra</span>
+                )}
                 <span className="flex items-center gap-2 ml-1 opacity-70">
                   {/* X */}
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>

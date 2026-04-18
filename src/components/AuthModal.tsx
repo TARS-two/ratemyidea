@@ -139,6 +139,20 @@ export default function AuthModal({ onClose, onSuccess, mode = "default", lang =
             </button>
           </form>
         )}
+
+        {isLimit && (
+            <div className="mt-4 text-center">
+                <p className="text-sm text-[var(--text-muted)] mb-2">
+                    {lang === "es" ? "¿Necesitas más evaluaciones?" : "Need more evaluations?"}
+                </p>
+                <button
+                    onClick={() => window.location.href = "/upgrade"}
+                    className="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl transition-all cursor-pointer text-sm"
+                >
+                    {lang === "es" ? "Actualizar a Pro" : "Upgrade to Pro"}
+                </button>
+            </div>
+        )}
       </div>
     </div>
   );

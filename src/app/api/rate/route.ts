@@ -7,7 +7,7 @@ import { getBadge, detectCategory } from "@/lib/badges";
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const BEEHIIV_API_KEY = process.env.BEEHIIV_API_KEY;
 const BEEHIIV_PUBLICATION_ID = process.env.BEEHIIV_PUBLICATION_ID;
-const FREE_LIMIT = 2;
+const FREE_LIMIT = 2; // Reverted to 2 - TARS 2026-04-29
 
 const SYSTEM_PROMPT = `You are a senior business analyst and startup advisor. You rate business ideas on a scale of 1-10 with detailed, honest, actionable feedback.
 

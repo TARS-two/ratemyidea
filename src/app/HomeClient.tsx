@@ -4,12 +4,9 @@ import { useState, useEffect, FormEvent, useRef } from "react";
 import { Lang, t } from "./i18n";
 import AuthModal from "@/components/AuthModal";
 import BenchmarkChart from "@/components/BenchmarkChart";
-import { createClient } from "@supabase/supabase-js"; // Added Supabase client import
+import { createClient } from "@/lib/supabase/client";
 
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient();
 
 /* ---------- types ---------- */
 interface Source {
@@ -56,6 +53,12 @@ interface UserSession {
   token: string;
   email: string;
   isPro: boolean;
+}
+
+interface UserProfile {
+  is_pro: boolean;
+  free_evaluations_left: number;
+  last_share_date: string | null;
 }
 
 /* ---------- score ring ---------- */
@@ -161,7 +164,7 @@ export default function HomeClient() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"limit" | "upgrade" | "default">("default");
   const [userSession, setUserSession] = useState<UserSession | null>(null);
-  const [userProfile, setUserProfile] = useState<any | null>(null); // Added for Supabase user profile
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [benchmark, setBenchmark] = useState<BenchmarkData | null>(null);
   const [strategicPlan, setStrategicPlan] = useState<string | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
@@ -169,7 +172,7 @@ export default function HomeClient() {
 
   const s = t[lang];
 
-  const isFreeUser = userSession && userProfile && !userProfile.is_pro;
+  const isFreeUser = Boolean(userSession && userProfile && !userProfile.is_pro);
   const hasSharedTodayForDisplay = userProfile && userProfile.last_share_date
     ? new Date(userProfile.last_share_date).toDateString() === new Date().toDateString()
     : false;
@@ -180,6 +183,11 @@ export default function HomeClient() {
     if (savedLang === "en" || savedLang === "es") setLang(savedLang);
 
     async function fetchUserAndProfile() {
+      if (!supabase) {
+        console.error("Supabase client is not configured.");
+        return;
+      }
+
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError) {
@@ -188,26 +196,41 @@ export default function HomeClient() {
       }
 
       if (session) {
-        // Update userSession state with the latest from Supabase
         setUserSession({
           token: session.access_token,
           email: session.user.email || "",
-          isPro: false, // This will be updated from profile
+          isPro: false,
         });
 
-        // Fetch user profile from the database
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('is_pro, free_evaluations_left, last_share_date')
-          .eq('id', session.user.id)
-          .single();
+        const { data: subscription, error: subscriptionError } = await supabase
+          .from("user_subscriptions")
+          .select("plan, status, extra_credits")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
 
-        if (!profileError && profile) {
-          setUserProfile(profile);
-          // Update isPro in userSession from profile data
-          setUserSession(prev => prev ? { ...prev, isPro: profile.is_pro } : null);
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+
+        const { data: shareCredit } = await supabase
+          .from("share_tokens")
+          .select("created_at")
+          .eq("sharer_user_id", session.user.id)
+          .is("evaluation_id", null)
+          .gte("created_at", today.toISOString())
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!subscriptionError) {
+          const isPro = subscription?.plan === "pro" && subscription?.status === "active";
+          setUserProfile({
+            is_pro: isPro,
+            free_evaluations_left: subscription?.extra_credits ?? 0,
+            last_share_date: shareCredit?.created_at ?? null,
+          });
+          setUserSession(prev => prev ? { ...prev, isPro } : null);
         } else {
-          console.error('Error fetching user profile:', profileError);
+          console.error("Error fetching user subscription:", subscriptionError);
         }
       }
     }

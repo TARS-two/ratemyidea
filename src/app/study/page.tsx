@@ -116,7 +116,7 @@ function Badge({ text, color }: { text: string; color: string }) {
 
 function StudyContent() {
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get("session_id") || "";
+  const sessionId = searchParams?.get("session_id") || "";
   const [study, setStudy] = useState<StudyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

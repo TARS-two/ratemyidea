@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       line_items: [{ price: priceId, quantity: 1 }],
       customer_email: email || undefined,
       metadata: { userId: userId || "" },
-      success_url: `${BASE_URL}/account?subscribed=true`,
+      success_url: `${BASE_URL}/?subscribed=true`,
       cancel_url: `${BASE_URL}/`,
     });
 

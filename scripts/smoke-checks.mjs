@@ -10,8 +10,10 @@ const shareCardRoute = readFileSync(new URL('../src/app/api/share-card/route.tsx
 assert(!authModal.includes('window.location.href = "/upgrade"'), 'Daily-limit Upgrade to Pro CTA must not route to missing /upgrade page.');
 assert(authModal.includes('onUpgrade'), 'AuthModal should expose an onUpgrade callback so the modal can start Pro checkout.');
 assert(home.includes('userId: userSession?.userId'), 'Pro checkout request should include authenticated userId.');
-assert(subscribeRoute.includes('metadata: { userId'), 'Stripe subscription checkout should persist userId in metadata.');
+assert(subscribeRoute.includes('const metadata = { userId') && subscribeRoute.includes('metadata,'), 'Stripe subscription checkout should persist userId in checkout metadata.');
+assert(subscribeRoute.includes('subscription_data: { metadata }'), 'Stripe subscription checkout should also persist userId in subscription_data.metadata.');
 assert(webhookRoute.includes('sub.metadata?.userId'), 'Stripe webhook should prefer subscription metadata userId for Pro unlock.');
+assert(webhookRoute.includes('checkout.session.completed'), 'Stripe webhook should also unlock Pro from checkout.session.completed as a fallback before subscription metadata arrives.');
 
 assert(!home.includes('if (data.category) fetchBenchmark(data.overall, data.category);'), 'Free evaluations must not fetch benchmark data automatically.');
 assert(home.includes('if (userSession?.isPro && data.category) fetchBenchmark(data.overall, data.category);'), 'Benchmark fetch should be gated to Pro users only.');

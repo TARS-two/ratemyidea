@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
   try {
     const { email, userId } = await request.json();
     const priceId = process.env.STRIPE_PRO_PRICE_ID;
+    const metadata = { userId: userId || "" };
 
     if (!priceId) {
       return NextResponse.json({ error: "Pro plan not configured." }, { status: 500 });
@@ -18,7 +19,8 @@ export async function POST(request: NextRequest) {
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
       customer_email: email || undefined,
-      metadata: { userId: userId || "" },
+      metadata,
+      subscription_data: { metadata },
       success_url: `${BASE_URL}/?subscribed=true`,
       cancel_url: `${BASE_URL}/`,
     });

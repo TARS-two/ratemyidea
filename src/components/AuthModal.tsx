@@ -7,11 +7,12 @@ interface AuthModalProps {
   onClose: () => void;
   onSuccess: (token: string, email: string, userId: string) => void;
   onUpgrade?: () => void;
+  isAuthenticated?: boolean;
   mode?: "limit" | "upgrade" | "default";
   lang?: string;
 }
 
-export default function AuthModal({ onClose, onSuccess, onUpgrade, mode = "default", lang = "en" }: AuthModalProps) {
+export default function AuthModal({ onClose, onSuccess, onUpgrade, isAuthenticated = false, mode = "default", lang = "en" }: AuthModalProps) {
   const [tab, setTab] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -56,6 +57,7 @@ export default function AuthModal({ onClose, onSuccess, onUpgrade, mode = "defau
   }
 
   const isLimit = mode === "limit";
+  const isLimitSignedIn = isLimit && isAuthenticated;
 
   return (
     <div
@@ -74,13 +76,18 @@ export default function AuthModal({ onClose, onSuccess, onUpgrade, mode = "defau
 
         {isLimit && (
           <p className="text-sm text-[var(--text-muted)] mb-5 bg-[var(--surface-light)] p-3 rounded-xl">
-            {lang === "es"
-              ? "Usaste tus 2 evaluaciones gratuitas de hoy. Crea una cuenta para continuar."
-              : "You've used your 2 free evaluations today. Sign in to continue or upgrade to Pro."}
+            {isLimitSignedIn
+              ? (lang === "es"
+                ? "Ya iniciaste sesión, pero alcanzaste tu límite diario. Actualiza a Pro para evaluaciones ilimitadas."
+                : "You're signed in, but you've reached your daily limit. Upgrade to Pro for unlimited evaluations.")
+              : (lang === "es"
+                ? "Usaste tus 2 evaluaciones gratuitas de hoy. Inicia sesión o actualiza a Pro para continuar."
+                : "You've used your 2 free evaluations today. Sign in to continue or upgrade to Pro.")}
           </p>
         )}
 
-        {/* Tabs */}
+        {!isAuthenticated && (
+          <>
         <div className="flex gap-1 mb-5 bg-[var(--surface-light)] rounded-xl p-1">
           {(["signin", "signup"] as const).map((t) => (
             <button
@@ -139,6 +146,8 @@ export default function AuthModal({ onClose, onSuccess, onUpgrade, mode = "defau
                 : (lang === "es" ? "Crear cuenta" : "Create account")}
             </button>
           </form>
+        )}
+          </>
         )}
 
         {isLimit && (

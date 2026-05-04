@@ -338,8 +338,8 @@ export default function HomeClient() {
       const data = await res.json();
       setResult(data);
 
-      // Fetch benchmark
-      if (data.category) fetchBenchmark(data.overall, data.category);
+      // Pro-only benchmark
+      if (userSession?.isPro && data.category) fetchBenchmark(data.overall, data.category);
 
       setTimeout(() => {
         resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -803,7 +803,7 @@ export default function HomeClient() {
               )}
 
               {/* Benchmark */}
-              {benchmark && (
+              {userSession?.isPro && benchmark && (
                 <BenchmarkChart data={benchmark} userScore={result.overall} lang={lang} />
               )}
 
@@ -968,6 +968,7 @@ export default function HomeClient() {
           onClose={() => setShowAuthModal(false)}
           onSuccess={handleAuthSuccess}
           onUpgrade={startProCheckout}
+          isAuthenticated={Boolean(userSession)}
           mode={authModalMode}
           lang={lang}
         />

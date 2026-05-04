@@ -36,15 +36,14 @@ export async function GET(request: NextRequest) {
           padding: "60px 40px",
         }}
       >
-        {/* Grid background */}
+        {/* Grid accent */}
         <div
           style={{
             position: "absolute",
             inset: 0,
             display: "flex",
-            backgroundImage:
-              "linear-gradient(rgba(108,58,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(108,58,255,0.06) 1px, transparent 1px)",
-            backgroundSize: "60px 60px",
+            backgroundColor: "rgba(108, 58, 255, 0.06)",
+            opacity: 0.35,
           }}
         />
 

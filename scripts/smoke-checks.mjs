@@ -24,4 +24,16 @@ assert(authModal.includes('!isAuthenticated && ('), 'Daily-limit modal should hi
 assert(!shareCardRoute.includes('backgroundImage:'), 'Share card should not use @vercel/og-fragile CSS backgroundImage gradients.');
 assert(shareCardRoute.includes('rgba(108, 58, 255, 0.06)'), 'Share card should use supported rgba color syntax with spaces for OG rendering.');
 
+assert(home.includes('interface EvaluationMeta'), 'Home UI should track evaluation-count metadata returned by /api/rate.');
+assert(home.includes('freeEvaluationsUsed'), 'Result flow should know whether this is the 1st or 2nd free evaluation.');
+assert(home.includes('canClaimShareCredit'), 'Share CTA should show +1 free evaluation only when the user can claim it.');
+assert(home.includes('claimShareCreditAfterAuth'), 'Anonymous share-credit claims should route through auth before granting persistent credit.');
+assert(home.includes('startProCheckout()'), 'After the final free evaluation, the secondary CTA should start Pro checkout instead of showing a disabled daily-limit button.');
+assert(home.includes('Get Pro for unlimited evaluations'), 'English final free-evaluation CTA copy should be explicit.');
+assert(home.includes('Obtén Pro para evaluaciones ilimitadas'), 'Spanish final free-evaluation CTA copy should be explicit.');
+assert(home.includes('+1 free evaluation') && home.includes('+1 evaluación gratis'), 'Share CTA should communicate the +1 evaluation incentive in both languages.');
+
+assert(authModal.includes('Create a free account to claim your extra evaluation'), 'Auth modal should explain login/signup is required to claim +1 free evaluation.');
+assert(authModal.includes('Crea una cuenta gratis para reclamar tu evaluación extra'), 'Auth modal should explain the +1 claim in Spanish.');
+
 console.log('smoke checks passed');

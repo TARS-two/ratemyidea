@@ -8,7 +8,7 @@ interface AuthModalProps {
   onSuccess: (token: string, email: string, userId: string) => void;
   onUpgrade?: () => void;
   isAuthenticated?: boolean;
-  mode?: "limit" | "upgrade" | "default";
+  mode?: "limit" | "upgrade" | "claim-credit" | "default";
   lang?: string;
 }
 
@@ -58,6 +58,7 @@ export default function AuthModal({ onClose, onSuccess, onUpgrade, isAuthenticat
 
   const isLimit = mode === "limit";
   const isLimitSignedIn = isLimit && isAuthenticated;
+  const isClaimCredit = mode === "claim-credit";
 
   return (
     <div
@@ -67,9 +68,11 @@ export default function AuthModal({ onClose, onSuccess, onUpgrade, isAuthenticat
       <div className="bg-[var(--surface)] border border-white/10 rounded-2xl w-full max-w-sm p-6 animate-fade-up">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-lg">
-            {isLimit
-              ? (lang === "es" ? "Límite alcanzado" : "Daily limit reached")
-              : (lang === "es" ? "Tu cuenta" : "Your account")}
+            {isClaimCredit
+              ? (lang === "es" ? "Reclama tu evaluación extra" : "Claim your extra evaluation")
+              : isLimit
+                ? (lang === "es" ? "Límite alcanzado" : "Daily limit reached")
+                : (lang === "es" ? "Tu cuenta" : "Your account")}
           </h2>
           <button onClick={onClose} className="text-[var(--text-muted)] hover:text-white text-xl leading-none cursor-pointer">✕</button>
         </div>
@@ -83,6 +86,14 @@ export default function AuthModal({ onClose, onSuccess, onUpgrade, isAuthenticat
               : (lang === "es"
                 ? "Usaste tus 2 evaluaciones gratuitas de hoy. Inicia sesión o actualiza a Pro para continuar."
                 : "You've used your 2 free evaluations today. Sign in to continue or upgrade to Pro.")}
+          </p>
+        )}
+
+        {isClaimCredit && (
+          <p className="text-sm text-[var(--text-muted)] mb-5 bg-[var(--surface-light)] p-3 rounded-xl">
+            {lang === "es"
+              ? "Crea una cuenta gratis para reclamar tu evaluación extra. Podrás conservar el crédito y usarlo aunque cierres esta página."
+              : "Create a free account to claim your extra evaluation. You'll keep the credit and can use it even if you close this page."}
           </p>
         )}
 

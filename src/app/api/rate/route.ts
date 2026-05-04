@@ -89,6 +89,8 @@ export async function POST(request: NextRequest) {
     const ipHash = hashIP(ip);
     let userId: string | null = null;
     let isPro = false;
+    let freeEvaluationsUsed = 0;
+    let freeEvaluationsLeft = FREE_LIMIT;
 
     // Check auth + subscription if Supabase is available
     if (supabase && authToken) {
@@ -122,6 +124,8 @@ export async function POST(request: NextRequest) {
         .gte("created_at", today.toISOString());
 
       const usedCount = count ?? 0;
+      freeEvaluationsUsed = Math.min(usedCount, FREE_LIMIT);
+      freeEvaluationsLeft = Math.max(FREE_LIMIT - usedCount, 0);
 
       if (usedCount >= FREE_LIMIT) {
         // Check extra credits
@@ -133,10 +137,13 @@ export async function POST(request: NextRequest) {
             .single();
 
           if (sub && sub.extra_credits > 0) {
+            const remainingExtraCredits = sub.extra_credits - 1;
             await supabase
               .from("user_subscriptions")
-              .update({ extra_credits: sub.extra_credits - 1 })
+              .update({ extra_credits: remainingExtraCredits })
               .eq("user_id", userId);
+            freeEvaluationsUsed = FREE_LIMIT;
+            freeEvaluationsLeft = remainingExtraCredits;
           } else {
             return NextResponse.json(
               {
@@ -157,6 +164,11 @@ export async function POST(request: NextRequest) {
             { status: 429 }
           );
         }
+      }
+
+      if (usedCount < FREE_LIMIT) {
+        freeEvaluationsUsed = Math.min(usedCount + 1, FREE_LIMIT);
+        freeEvaluationsLeft = Math.max(FREE_LIMIT - freeEvaluationsUsed, 0);
       }
     }
 
@@ -236,6 +248,9 @@ export async function POST(request: NextRequest) {
     parsed.badge = badge;
     parsed.category = category;
     parsed.sources = sources;
+    parsed.isPro = isPro;
+    parsed.freeEvaluationsUsed = freeEvaluationsUsed;
+    parsed.freeEvaluationsLeft = freeEvaluationsLeft;
 
     // Save to DB (non-blocking)
     if (supabase) {

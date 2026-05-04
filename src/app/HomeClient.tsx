@@ -62,6 +62,12 @@ interface UserProfile {
   last_share_date: string | null;
 }
 
+interface EvaluationMeta {
+  isPro: boolean;
+  freeEvaluationsUsed: number;
+  freeEvaluationsLeft: number;
+}
+
 /* ---------- score ring ---------- */
 function ScoreRing({ score }: { score: number }) {
   const circumference = 2 * Math.PI * 45;
@@ -163,9 +169,11 @@ export default function HomeClient() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<"limit" | "upgrade" | "default">("default");
+  const [authModalMode, setAuthModalMode] = useState<"limit" | "upgrade" | "claim-credit" | "default">("default");
   const [userSession, setUserSession] = useState<UserSession | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [evaluationMeta, setEvaluationMeta] = useState<EvaluationMeta | null>(null);
+  const [claimShareCreditAfterAuth, setClaimShareCreditAfterAuth] = useState(false);
   const [benchmark, setBenchmark] = useState<BenchmarkData | null>(null);
   const [strategicPlan, setStrategicPlan] = useState<string | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
@@ -173,10 +181,20 @@ export default function HomeClient() {
 
   const s = t[lang];
 
-  const isFreeUser = Boolean(userSession && userProfile && !userProfile.is_pro);
   const hasSharedTodayForDisplay = userProfile && userProfile.last_share_date
     ? new Date(userProfile.last_share_date).toDateString() === new Date().toDateString()
     : false;
+  const canClaimShareCredit = Boolean(
+    evaluationMeta &&
+    !evaluationMeta.isPro &&
+    evaluationMeta.freeEvaluationsLeft === 0 &&
+    !hasSharedTodayForDisplay
+  );
+  const shouldShowFinalFreeCta = Boolean(
+    evaluationMeta &&
+    !evaluationMeta.isPro &&
+    evaluationMeta.freeEvaluationsLeft === 0
+  );
 
   // Load lang + session from localStorage and Supabase on mount
   useEffect(() => {
@@ -251,6 +269,10 @@ export default function HomeClient() {
     setUserSession(session);
     localStorage.setItem("rmi_session", JSON.stringify(session));
     setShowAuthModal(false);
+    if (claimShareCreditAfterAuth) {
+      setClaimShareCreditAfterAuth(false);
+      void claimShareCredit(token);
+    }
   }
 
   function handleSignOut() {
@@ -304,6 +326,7 @@ export default function HomeClient() {
     setLoading(true);
     setError("");
     setResult(null);
+    setEvaluationMeta(null);
     setBenchmark(null);
     setStrategicPlan(null);
 
@@ -337,6 +360,18 @@ export default function HomeClient() {
 
       const data = await res.json();
       setResult(data);
+      setEvaluationMeta({
+        isPro: Boolean(data.isPro),
+        freeEvaluationsUsed: data.freeEvaluationsUsed ?? 0,
+        freeEvaluationsLeft: data.freeEvaluationsLeft ?? 0,
+      });
+      if (userSession && !data.isPro) {
+        setUserProfile(prevProfile => ({
+          is_pro: false,
+          free_evaluations_left: data.freeEvaluationsLeft ?? prevProfile?.free_evaluations_left ?? 0,
+          last_share_date: prevProfile?.last_share_date ?? null,
+        }));
+      }
 
       // Pro-only benchmark
       if (userSession?.isPro && data.category) fetchBenchmark(data.overall, data.category);
@@ -408,46 +443,53 @@ export default function HomeClient() {
     }
   }
 
+  async function claimShareCredit(token = userSession?.token) {
+    if (!token) return false;
+    try {
+      const response = await fetch("/api/share-credit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setUserProfile(prevProfile => prevProfile ? {
+          ...prevProfile,
+          free_evaluations_left: data.freeEvaluationsLeft !== undefined ? data.freeEvaluationsLeft : prevProfile.free_evaluations_left + 1,
+          last_share_date: data.lastShareDate ?? new Date().toISOString(),
+        } : {
+          is_pro: false,
+          free_evaluations_left: data.freeEvaluationsLeft ?? 1,
+          last_share_date: data.lastShareDate ?? new Date().toISOString(),
+        });
+        setEvaluationMeta(prevMeta => prevMeta ? {
+          ...prevMeta,
+          freeEvaluationsLeft: data.freeEvaluationsLeft ?? Math.max(prevMeta.freeEvaluationsLeft, 1),
+        } : prevMeta);
+        return true;
+      }
+      console.error("Error al otorgar crédito por compartir:", data.error);
+    } catch (error) {
+      console.error("Error de red al llamar a /api/share-credit:", error);
+    }
+    return false;
+  }
+
   async function handleShareWithImage(target?: "whatsapp" | "twitter" | "linkedin") {
     const file = await getShareImage();
     const text = getShareText();
 
-    // 1. Call backend to grant credit BEFORE native share
-    if (userSession && userProfile && !userProfile.is_pro) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const lastShareDate = userProfile.last_share_date ? new Date(userProfile.last_share_date) : null;
-      let hasSharedToday = false;
-      if (lastShareDate) {
-          lastShareDate.setHours(0, 0, 0, 0);
-          hasSharedToday = lastShareDate.getTime() === today.getTime();
-      }
+    if (canClaimShareCredit && !userSession) {
+      setClaimShareCreditAfterAuth(true);
+      setAuthModalMode("claim-credit");
+      setShowAuthModal(true);
+      return;
+    }
 
-      if (!hasSharedToday) {
-        try {
-          const response = await fetch("/api/share-credit", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${userSession.token}`,
-            },
-          });
-          const data = await response.json();
-          if (response.ok) {
-            console.log(data.message);
-            // Update userProfile state to reflect new evaluations or share date
-            setUserProfile(prevProfile => prevProfile ? {
-              ...prevProfile,
-              free_evaluations_left: data.freeEvaluationsLeft !== undefined ? data.freeEvaluationsLeft : prevProfile.free_evaluations_left + 1,
-              last_share_date: new Date().toISOString(),
-            } : null);
-          } else {
-            console.error("Error al otorgar crédito por compartir:", data.error);
-          }
-        } catch (error) {
-          console.error("Error de red al llamar a /api/share-credit:", error);
-        }
-      }
+    if (canClaimShareCredit && userSession) {
+      await claimShareCredit(userSession.token);
     }
     
     // Try native share with image (works great on mobile)
@@ -918,21 +960,24 @@ export default function HomeClient() {
                   className="flex-1 py-3 bg-[var(--surface)] border border-white/10 rounded-xl text-[var(--text-primary)] font-medium hover:border-[var(--electric)]/50 transition-all cursor-pointer"
                 >
                   📤 {s.shareScore}
+                  {canClaimShareCredit && (
+                    <span className="ml-2 text-green-400 text-sm font-semibold">
+                      {lang === "es" ? "+1 evaluación gratis" : "+1 free evaluation"}
+                    </span>
+                  )}
                 </button>
                 <button
-                  onClick={handleReset}
-                  className={`flex-1 py-3 bg-[var(--surface)] border rounded-xl text-[var(--text-primary)] font-medium transition-all cursor-pointer
-                    ${isFreeUser && userProfile?.free_evaluations_left === 0
-                      ? "border-red-500/20 text-red-400 opacity-60 cursor-not-allowed"
-                      : "border-white/10 hover:border-[var(--electric)]/50"}
+                  onClick={shouldShowFinalFreeCta ? () => startProCheckout() : handleReset}
+                  className={`flex-1 py-3 border rounded-xl font-medium transition-all cursor-pointer
+                    ${shouldShowFinalFreeCta
+                      ? "bg-[var(--electric)] border-[var(--electric)] text-white hover:bg-[var(--electric-dark)]"
+                      : "bg-[var(--surface)] border-white/10 text-[var(--text-primary)] hover:border-[var(--electric)]/50"}
                   `}
-                  disabled={isFreeUser && userProfile?.free_evaluations_left === 0}
+                  disabled={checkoutLoading}
                 >
                   <div className="flex items-center justify-center gap-2">
-                    {isFreeUser && userProfile?.free_evaluations_left === 0 ? (
-                      <span className="flex items-center gap-2">
-                        ⚠️ {lang === "es" ? "Límite por día alcanzado" : "Daily limit reached"}
-                      </span>
+                    {shouldShowFinalFreeCta ? (
+                      <>{checkoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "Obtén Pro para evaluaciones ilimitadas" : "Get Pro for unlimited evaluations")}</>
                     ) : (
                       <>🔄 {s.rateAnother}</>
                     )}
@@ -1037,8 +1082,10 @@ export default function HomeClient() {
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                 {lang === "es" ? "Compartir imagen" : "Share image"}
-                {userProfile && !userProfile.is_pro && !hasSharedTodayForDisplay && (
-                  <span className="text-sm font-medium text-green-500 ml-2">+1 evaluación extra</span>
+                {canClaimShareCredit && (
+                  <span className="text-sm font-medium text-green-500 ml-2">
+                    {lang === "es" ? "+1 evaluación gratis" : "+1 free evaluation"}
+                  </span>
                 )}
                 <span className="flex items-center gap-2 ml-1 opacity-70">
                   {/* X */}

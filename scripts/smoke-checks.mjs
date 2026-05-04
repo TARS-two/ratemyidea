@@ -7,6 +7,9 @@ const subscribeRoute = readFileSync(new URL('../src/app/api/stripe/subscribe/rou
 const webhookRoute = readFileSync(new URL('../src/app/api/stripe/webhook/route.ts', import.meta.url), 'utf8');
 const shareCardRoute = readFileSync(new URL('../src/app/api/share-card/route.tsx', import.meta.url), 'utf8');
 
+assert(authModal.includes('emailRedirectTo'), 'Supabase signup should set emailRedirectTo so production confirmations do not go to localhost.');
+assert(authModal.includes('window.location.origin'), 'Supabase signup redirect should use the current deployed origin.');
+
 assert(!authModal.includes('window.location.href = "/upgrade"'), 'Daily-limit Upgrade to Pro CTA must not route to missing /upgrade page.');
 assert(authModal.includes('onUpgrade'), 'AuthModal should expose an onUpgrade callback so the modal can start Pro checkout.');
 assert(home.includes('userId: userSession?.userId'), 'Pro checkout request should include authenticated userId.');

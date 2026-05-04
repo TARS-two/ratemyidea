@@ -30,7 +30,13 @@ export default function AuthModal({ onClose, onSuccess, onUpgrade, isAuthenticat
 
     try {
       if (tab === "signup") {
-        const { data, error: err } = await supabase.auth.signUp({ email, password });
+        const { data, error: err } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin,
+          },
+        });
         if (err) throw err;
         if (data.user && !data.session) {
           setSuccess(lang === "es"

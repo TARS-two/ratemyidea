@@ -32,20 +32,25 @@ export async function POST(request: NextRequest) {
         const customerId = sub.customer as string;
         const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
         const email = customer.email;
+        const metadataUserId = typeof sub.metadata?.userId === "string" && sub.metadata.userId
+          ? sub.metadata.userId
+          : null;
 
-        if (email) {
+        let userId = metadataUserId;
+        if (!userId && email) {
           const { data: { users } } = await supabase.auth.admin.listUsers();
-          const user = users.find((u) => u.email === email);
-          if (user) {
-            await supabase.from("user_subscriptions").upsert({
-              user_id: user.id,
-              stripe_customer_id: customerId,
-              stripe_subscription_id: sub.id,
-              plan: sub.status === "active" ? "pro" : "free",
-              status: sub.status,
-              updated_at: new Date().toISOString(),
-            }, { onConflict: "user_id" });
-          }
+          userId = users.find((u) => u.email === email)?.id ?? null;
+        }
+
+        if (userId) {
+          await supabase.from("user_subscriptions").upsert({
+            user_id: userId,
+            stripe_customer_id: customerId,
+            stripe_subscription_id: sub.id,
+            plan: sub.status === "active" ? "pro" : "free",
+            status: sub.status,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "user_id" });
         }
         break;
       }

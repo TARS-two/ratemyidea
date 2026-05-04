@@ -52,6 +52,7 @@ interface BenchmarkData {
 interface UserSession {
   token: string;
   email: string;
+  userId: string;
   isPro: boolean;
 }
 
@@ -199,6 +200,7 @@ export default function HomeClient() {
         setUserSession({
           token: session.access_token,
           email: session.user.email || "",
+          userId: session.user.id,
           isPro: false,
         });
 
@@ -244,8 +246,8 @@ export default function HomeClient() {
     localStorage.setItem("lang", next);
   }
 
-  function handleAuthSuccess(token: string, authEmail: string) {
-    const session: UserSession = { token, email: authEmail, isPro: false };
+  function handleAuthSuccess(token: string, authEmail: string, userId: string) {
+    const session: UserSession = { token, email: authEmail, userId, isPro: false };
     setUserSession(session);
     localStorage.setItem("rmi_session", JSON.stringify(session));
     setShowAuthModal(false);
@@ -484,6 +486,32 @@ export default function HomeClient() {
     navigator.clipboard.writeText(getShareText());
     setShared(true);
     setTimeout(() => setShared(false), 2000);
+  }
+
+  async function startProCheckout() {
+    setCheckoutLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/stripe/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: userSession?.email || email.trim() || undefined,
+          userId: userSession?.userId,
+          lang,
+        }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setError(data.error || "Could not start Pro checkout. Please try again.");
+        setCheckoutLoading(false);
+      }
+    } catch {
+      setError("Could not start Pro checkout. Please try again.");
+      setCheckoutLoading(false);
+    }
   }
 
   function handleReset() {
@@ -820,18 +848,11 @@ export default function HomeClient() {
                         <li>✓ {lang === "es" ? "Benchmark vs otras ideas" : "Benchmark vs other ideas"}</li>
                       </ul>
                       <button
-                        onClick={async () => {
-                          const res = await fetch("/api/stripe/subscribe", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ email: userSession?.email || email, lang }), // Added lang to body
-                          });
-                          const data = await res.json();
-                          if (data.url) window.location.href = data.url;
-                        }}
-                        className="mt-4 mx-auto px-5 py-2.5 bg-[var(--electric)] hover:bg-[var(--electric-dark)] text-white font-semibold rounded-xl transition-all cursor-pointer text-sm block w-fit"
+                        onClick={startProCheckout}
+                        disabled={checkoutLoading}
+                        className="mt-4 mx-auto px-5 py-2.5 bg-[var(--electric)] hover:bg-[var(--electric-dark)] disabled:opacity-50 text-white font-semibold rounded-xl transition-all cursor-pointer text-sm block w-fit"
                       >
-                        {lang === "es" ? "Activar Pro" : "Get Pro"}
+                        {checkoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "Activar Pro" : "Get Pro")}
                       </button>
                     </div>
                   </div>
@@ -946,6 +967,7 @@ export default function HomeClient() {
         <AuthModal
           onClose={() => setShowAuthModal(false)}
           onSuccess={handleAuthSuccess}
+          onUpgrade={startProCheckout}
           mode={authModalMode}
           lang={lang}
         />

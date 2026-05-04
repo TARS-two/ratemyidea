@@ -5,12 +5,13 @@ import { createClient } from "@/lib/supabase/client";
 
 interface AuthModalProps {
   onClose: () => void;
-  onSuccess: (token: string, email: string) => void;
+  onSuccess: (token: string, email: string, userId: string) => void;
+  onUpgrade?: () => void;
   mode?: "limit" | "upgrade" | "default";
   lang?: string;
 }
 
-export default function AuthModal({ onClose, onSuccess, mode = "default", lang = "en" }: AuthModalProps) {
+export default function AuthModal({ onClose, onSuccess, onUpgrade, mode = "default", lang = "en" }: AuthModalProps) {
   const [tab, setTab] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,13 +38,13 @@ export default function AuthModal({ onClose, onSuccess, mode = "default", lang =
           return;
         }
         if (data.session) {
-          onSuccess(data.session.access_token, email);
+          onSuccess(data.session.access_token, email, data.session.user.id);
         }
       } else {
         const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
         if (err) throw err;
         if (data.session) {
-          onSuccess(data.session.access_token, email);
+          onSuccess(data.session.access_token, email, data.session.user.id);
         }
       }
     } catch (err: unknown) {
@@ -146,8 +147,9 @@ export default function AuthModal({ onClose, onSuccess, mode = "default", lang =
                     {lang === "es" ? "¿Necesitas más evaluaciones?" : "Need more evaluations?"}
                 </p>
                 <button
-                    onClick={() => window.location.href = "/upgrade"}
-                    className="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl transition-all cursor-pointer text-sm"
+                    onClick={onUpgrade}
+                    disabled={!onUpgrade || loading}
+                    className="w-full py-3 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-all cursor-pointer text-sm"
                 >
                     {lang === "es" ? "Actualizar a Pro" : "Upgrade to Pro"}
                 </button>

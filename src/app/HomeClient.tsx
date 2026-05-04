@@ -167,7 +167,8 @@ export default function HomeClient() {
   const [shared, setShared] = useState(false);
   const [hideIdea, setHideIdea] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [proCheckoutLoading, setProCheckoutLoading] = useState(false);
+  const [marketStudyCheckoutLoading, setMarketStudyCheckoutLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"limit" | "upgrade" | "claim-credit" | "default">("default");
   const [userSession, setUserSession] = useState<UserSession | null>(null);
@@ -180,19 +181,20 @@ export default function HomeClient() {
   const resultRef = useRef<HTMLDivElement>(null);
 
   const s = t[lang];
+  const isCurrentPro = Boolean(userSession?.isPro || userProfile?.is_pro || evaluationMeta?.isPro);
 
   const hasSharedTodayForDisplay = userProfile && userProfile.last_share_date
     ? new Date(userProfile.last_share_date).toDateString() === new Date().toDateString()
     : false;
   const canClaimShareCredit = Boolean(
     evaluationMeta &&
-    !evaluationMeta.isPro &&
+    !isCurrentPro &&
     evaluationMeta.freeEvaluationsLeft === 0 &&
     !hasSharedTodayForDisplay
   );
   const shouldShowFinalFreeCta = Boolean(
     evaluationMeta &&
-    !evaluationMeta.isPro &&
+    !isCurrentPro &&
     evaluationMeta.freeEvaluationsLeft === 0
   );
 
@@ -256,6 +258,20 @@ export default function HomeClient() {
     }
 
     fetchUserAndProfile();
+  }, []);
+
+  useEffect(() => {
+    function resetCheckoutLoading() {
+      setProCheckoutLoading(false);
+      setMarketStudyCheckoutLoading(false);
+    }
+
+    window.addEventListener("pageshow", resetCheckoutLoading);
+    window.addEventListener("focus", resetCheckoutLoading);
+    return () => {
+      window.removeEventListener("pageshow", resetCheckoutLoading);
+      window.removeEventListener("focus", resetCheckoutLoading);
+    };
   }, []);
 
   function toggleLang() {
@@ -365,7 +381,14 @@ export default function HomeClient() {
         freeEvaluationsUsed: data.freeEvaluationsUsed ?? 0,
         freeEvaluationsLeft: data.freeEvaluationsLeft ?? 0,
       });
-      if (userSession && !data.isPro) {
+      if (userSession && data.isPro) {
+        setUserProfile(prevProfile => ({
+          is_pro: true,
+          free_evaluations_left: prevProfile?.free_evaluations_left ?? 0,
+          last_share_date: prevProfile?.last_share_date ?? null,
+        }));
+        setUserSession(prev => prev ? { ...prev, isPro: true } : prev);
+      } else if (userSession && !data.isPro) {
         setUserProfile(prevProfile => ({
           is_pro: false,
           free_evaluations_left: data.freeEvaluationsLeft ?? prevProfile?.free_evaluations_left ?? 0,
@@ -374,7 +397,7 @@ export default function HomeClient() {
       }
 
       // Pro-only benchmark
-      if (userSession?.isPro && data.category) fetchBenchmark(data.overall, data.category);
+      if ((userSession?.isPro || data.isPro) && data.category) fetchBenchmark(data.overall, data.category);
 
       setTimeout(() => {
         resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -481,17 +504,6 @@ export default function HomeClient() {
     const file = await getShareImage();
     const text = getShareText();
 
-    if (canClaimShareCredit && !userSession) {
-      setClaimShareCreditAfterAuth(true);
-      setAuthModalMode("claim-credit");
-      setShowAuthModal(true);
-      return;
-    }
-
-    if (canClaimShareCredit && userSession) {
-      await claimShareCredit(userSession.token);
-    }
-    
     // Try native share with image (works great on mobile)
     if (file && navigator.share && navigator.canShare?.({ files: [file] })) {
       try {
@@ -518,10 +530,24 @@ export default function HomeClient() {
         window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent("https://ratemyidea.ai")}`, "_blank");
         break;
       default:
-        navigator.clipboard.writeText(text);
+        if (file) {
+          await handleDownloadImage();
+        }
+        await navigator.clipboard.writeText(text);
         setShared(true);
         setTimeout(() => setShared(false), 2000);
     }
+  }
+
+  async function handleClaimShareCredit() {
+    if (!canClaimShareCredit) return;
+    if (!userSession) {
+      setClaimShareCreditAfterAuth(true);
+      setAuthModalMode("claim-credit");
+      setShowAuthModal(true);
+      return;
+    }
+    await claimShareCredit(userSession.token);
   }
 
   function handleCopyText() {
@@ -531,7 +557,7 @@ export default function HomeClient() {
   }
 
   async function startProCheckout() {
-    setCheckoutLoading(true);
+    setProCheckoutLoading(true);
     setError("");
     try {
       const res = await fetch("/api/stripe/subscribe", {
@@ -548,11 +574,11 @@ export default function HomeClient() {
         window.location.href = data.url;
       } else {
         setError(data.error || "Could not start Pro checkout. Please try again.");
-        setCheckoutLoading(false);
+        setProCheckoutLoading(false);
       }
     } catch {
       setError("Could not start Pro checkout. Please try again.");
-      setCheckoutLoading(false);
+      setProCheckoutLoading(false);
     }
   }
 
@@ -588,12 +614,14 @@ export default function HomeClient() {
 
             {userSession ? (
               <div className="flex items-center gap-2">
-                {userSession.isPro && (
+                {isCurrentPro && (
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--electric)]/20 text-[var(--electric-light)]">Pro</span>
                 )}
-                <a href="/history" className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors hidden sm:block">
-                  History
-                </a>
+                {isCurrentPro && (
+                  <a href={`/history?token=${encodeURIComponent(userSession.token)}`} className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors hidden sm:block">
+                    History
+                  </a>
+                )}
                 <button
                   onClick={handleSignOut}
                   className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
@@ -844,8 +872,25 @@ export default function HomeClient() {
                 </div>
               )}
 
+              {/* Pro member status */}
+              {isCurrentPro && (
+                <div className="bg-[var(--surface)] border border-[var(--electric)]/30 rounded-2xl p-5 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-[var(--electric-light)] font-semibold">Pro member</p>
+                    <p className="text-sm text-[var(--text-secondary)] mt-1">
+                      {lang === "es" ? "Evaluaciones ilimitadas, benchmark e historial activos." : "Unlimited evaluations, benchmark, and history are active."}
+                    </p>
+                  </div>
+                  {userSession && (
+                    <a href={`/history?token=${encodeURIComponent(userSession.token)}`} className="text-sm px-4 py-2 rounded-xl bg-[var(--electric)] text-white font-medium hover:bg-[var(--electric-dark)] transition-colors">
+                      History
+                    </a>
+                  )}
+                </div>
+              )}
+
               {/* Benchmark */}
-              {userSession?.isPro && benchmark && (
+              {isCurrentPro && benchmark && (
                 <BenchmarkChart data={benchmark} userScore={result.overall} lang={lang} />
               )}
 
@@ -859,7 +904,7 @@ export default function HomeClient() {
                     {strategicPlan}
                   </div>
                 </div>
-              ) : userSession?.isPro ? (
+              ) : isCurrentPro ? (
                 <div className="bg-[var(--surface)] border border-white/10 rounded-2xl p-6 text-center">
                   <p className="text-sm text-[var(--text-muted)] mb-3">
                     {lang === "es" ? "Genera un plan de acción de 30 días para esta idea" : "Generate a 30-day action plan for this idea"}
@@ -875,15 +920,15 @@ export default function HomeClient() {
               ) : null}
 
               {/* Pro CTA for free users */}
-              {!userSession?.isPro && (
+              {!isCurrentPro && (
                 <div className="bg-[var(--surface)] border border-[var(--electric)]/20 rounded-2xl p-6">
                   <div className="flex items-start gap-3">
                     <span className="text-2xl">⚡</span>
-                    <div className="flex-1">
+                    <div className="flex-1 text-center">
                       <h3 className="font-bold mb-1">
                         {lang === "es" ? "Upgrade a Pro — $9/mes" : "Upgrade to Pro — $9/mo"}
                       </h3>
-                      <ul className="text-sm text-[var(--text-muted)] space-y-1 mb-4">
+                      <ul className="text-sm text-[var(--text-muted)] space-y-1 mb-4 inline-block text-left">
                         <li>✓ {lang === "es" ? "Evaluaciones ilimitadas" : "Unlimited evaluations"}</li>
                         <li>✓ {lang === "es" ? "Historial de ideas" : "Idea history"}</li>
                         <li>✓ {lang === "es" ? "5 planes estratégicos 30 días/mes" : "5 strategic plans/month"}</li>
@@ -891,10 +936,10 @@ export default function HomeClient() {
                       </ul>
                       <button
                         onClick={startProCheckout}
-                        disabled={checkoutLoading}
+                        disabled={proCheckoutLoading}
                         className="mt-4 mx-auto px-5 py-2.5 bg-[var(--electric)] hover:bg-[var(--electric-dark)] disabled:opacity-50 text-white font-semibold rounded-xl transition-all cursor-pointer text-sm block w-fit"
                       >
-                        {checkoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "Activar Pro" : "Get Pro")}
+                        {proCheckoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "Activar Pro" : "Get Pro")}
                       </button>
                     </div>
                   </div>
@@ -910,9 +955,9 @@ export default function HomeClient() {
                   {s.upsellDesc}
                 </p>
                 <button
-                  disabled={checkoutLoading}
+                  disabled={marketStudyCheckoutLoading}
                   onClick={async () => {
-                    setCheckoutLoading(true);
+                    setMarketStudyCheckoutLoading(true);
                     setError("");
                     try {
                       const res = await fetch("/api/checkout", {
@@ -930,16 +975,16 @@ export default function HomeClient() {
                         window.location.href = data.url;
                       } else {
                         setError(data.error || "Checkout failed. Please try again.");
-                        setCheckoutLoading(false);
+                        setMarketStudyCheckoutLoading(false);
                       }
                     } catch {
                       setError("Could not start checkout. Please try again.");
-                      setCheckoutLoading(false);
+                      setMarketStudyCheckoutLoading(false);
                     }
                   }}
                   className="px-8 py-4 bg-[var(--electric)] hover:bg-[var(--electric-dark)] disabled:opacity-60 text-white font-semibold rounded-xl transition-all cursor-pointer glow-pulse text-lg"
                 >
-                  {checkoutLoading ? (
+                  {marketStudyCheckoutLoading ? (
                     <span className="flex items-center justify-center gap-2">
                       <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -973,11 +1018,11 @@ export default function HomeClient() {
                       ? "bg-[var(--electric)] border-[var(--electric)] text-white hover:bg-[var(--electric-dark)]"
                       : "bg-[var(--surface)] border-white/10 text-[var(--text-primary)] hover:border-[var(--electric)]/50"}
                   `}
-                  disabled={checkoutLoading}
+                  disabled={proCheckoutLoading}
                 >
                   <div className="flex items-center justify-center gap-2">
                     {shouldShowFinalFreeCta ? (
-                      <>{checkoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "Obtén Pro para evaluaciones ilimitadas" : "Get Pro for unlimited evaluations")}</>
+                      <>{proCheckoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "Obtén Pro para evaluaciones ilimitadas" : "Get Pro for unlimited evaluations")}</>
                     ) : (
                       <>🔄 {s.rateAnother}</>
                     )}
@@ -1082,11 +1127,6 @@ export default function HomeClient() {
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                 {lang === "es" ? "Compartir imagen" : "Share image"}
-                {canClaimShareCredit && (
-                  <span className="text-sm font-medium text-green-500 ml-2">
-                    {lang === "es" ? "+1 evaluación gratis" : "+1 free evaluation"}
-                  </span>
-                )}
                 <span className="flex items-center gap-2 ml-1 opacity-70">
                   {/* X */}
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
@@ -1095,7 +1135,21 @@ export default function HomeClient() {
                   {/* LinkedIn */}
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
                 </span>
+                {canClaimShareCredit && (
+                  <span className="ml-2 rounded-full bg-green-500/10 border border-green-500/30 px-2 py-0.5 text-green-300 text-xs font-semibold whitespace-nowrap">
+                    {lang === "es" ? "+1 evaluación gratis" : "+1 free evaluation"}
+                  </span>
+                )}
               </button>
+
+              {canClaimShareCredit && (
+                <button
+                  onClick={handleClaimShareCredit}
+                  className="w-full py-3 bg-green-500/10 border border-green-500/30 text-green-300 font-semibold rounded-xl hover:bg-green-500/15 transition-all cursor-pointer text-sm"
+                >
+                  {lang === "es" ? "Reclamar +1 evaluación gratis" : "Claim +1 free evaluation"}
+                </button>
+              )}
 
               {/* Secondary row: Save + Copy */}
               <div className="grid grid-cols-2 gap-2">

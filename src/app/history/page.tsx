@@ -16,6 +16,16 @@ export default async function HistoryPage({
   const { data: { user } } = await supabase.auth.getUser(token || "");
   if (!user) redirect("/?auth=required");
 
+  const { data: subscription } = await supabase
+    .from("user_subscriptions")
+    .select("plan, status")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (subscription?.plan !== "pro" || subscription?.status !== "active") {
+    redirect("/?upgrade=required");
+  }
+
   const { data: evaluations } = await supabase
     .from("evaluations")
     .select("id, idea_name, idea_text, overall_score, category, badge, lang, created_at")

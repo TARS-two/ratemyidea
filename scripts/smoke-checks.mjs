@@ -6,6 +6,7 @@ const authModal = readFileSync(new URL('../src/components/AuthModal.tsx', import
 const subscribeRoute = readFileSync(new URL('../src/app/api/stripe/subscribe/route.ts', import.meta.url), 'utf8');
 const webhookRoute = readFileSync(new URL('../src/app/api/stripe/webhook/route.ts', import.meta.url), 'utf8');
 const shareCardRoute = readFileSync(new URL('../src/app/api/share-card/route.tsx', import.meta.url), 'utf8');
+const historyPage = readFileSync(new URL('../src/app/history/page.tsx', import.meta.url), 'utf8');
 
 assert(authModal.includes('emailRedirectTo'), 'Supabase signup should set emailRedirectTo so production confirmations do not go to localhost.');
 assert(authModal.includes('window.location.origin'), 'Supabase signup redirect should use the current deployed origin.');
@@ -19,8 +20,8 @@ assert(webhookRoute.includes('sub.metadata?.userId'), 'Stripe webhook should pre
 assert(webhookRoute.includes('checkout.session.completed'), 'Stripe webhook should also unlock Pro from checkout.session.completed as a fallback before subscription metadata arrives.');
 
 assert(!home.includes('if (data.category) fetchBenchmark(data.overall, data.category);'), 'Free evaluations must not fetch benchmark data automatically.');
-assert(home.includes('if (userSession?.isPro && data.category) fetchBenchmark(data.overall, data.category);'), 'Benchmark fetch should be gated to Pro users only.');
-assert(home.includes('{userSession?.isPro && benchmark && ('), 'Benchmark component should render only for Pro users.');
+assert(home.includes('if ((userSession?.isPro || data.isPro) && data.category) fetchBenchmark(data.overall, data.category);'), 'Benchmark fetch should be gated to current Pro users only.');
+assert(home.includes('{isCurrentPro && benchmark && ('), 'Benchmark component should render only for Pro users.');
 
 assert(authModal.includes('isAuthenticated?: boolean'), 'AuthModal should know when user is already signed in.');
 assert(authModal.includes('isLimitSignedIn = isLimit && isAuthenticated'), 'Daily-limit modal should have a signed-in variant instead of asking logged-in users to sign in.');
@@ -40,5 +41,19 @@ assert(home.includes('+1 free evaluation') && home.includes('+1 evaluación grat
 
 assert(authModal.includes('Create a free account to claim your extra evaluation'), 'Auth modal should explain login/signup is required to claim +1 free evaluation.');
 assert(authModal.includes('Crea una cuenta gratis para reclamar tu evaluación extra'), 'Auth modal should explain the +1 claim in Spanish.');
+
+assert(home.includes('proCheckoutLoading') && home.includes('marketStudyCheckoutLoading'), 'Pro and Market Study checkout loading states should be isolated.');
+assert(home.includes('window.addEventListener("pageshow"'), 'Checkout loading states should reset when returning from Stripe/cancel/back navigation.');
+assert(!home.includes('disabled={checkoutLoading}'), 'A shared checkoutLoading flag should not disable unrelated result actions.');
+assert(home.includes('const isCurrentPro'), 'Result UI should use a single current Pro state instead of stale userSession checks.');
+assert(home.includes('isCurrentPro && benchmark'), 'Benchmark should render from the current Pro state.');
+assert(home.includes('isCurrentPro && (') && home.includes('Pro member'), 'Pro users should see a visible Pro member indicator beyond the small nav badge.');
+assert(home.includes('href={`/history?token=${encodeURIComponent(userSession.token)}`}'), 'History link should include the Supabase access token expected by the history page.');
+assert(!home.includes('<a href="/history"'), 'History link without token is broken and should not render.');
+assert(home.includes('claimShareCredit') && home.includes('Claim +1 free evaluation'), 'Claiming +1 free evaluation should be a separate action from sharing the image.');
+assert(!home.includes('if (canClaimShareCredit && !userSession) {\n      setClaimShareCreditAfterAuth'), 'Share image should not be blocked by the auth claim modal.');
+assert(home.includes('handleShareWithImage') && home.includes('handleDownloadImage'), 'Share image should have a download fallback when native file sharing is unavailable.');
+
+assert(historyPage.includes('user_subscriptions') && historyPage.includes('subscription?.plan !== "pro"'), 'History page should be gated to Pro subscribers server-side.');
 
 console.log('smoke checks passed');

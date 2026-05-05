@@ -65,8 +65,11 @@ assert(home.includes('isCurrentPro && (') && home.includes('Pro member'), 'Pro u
 assert(home.includes('showHeaderUpgradeCta'), 'Header should explicitly decide when to show the Pro upgrade CTA.');
 assert(home.includes('Get Pro account'), 'Header should show Get Pro account CTA for anonymous/free users.');
 assert(home.includes('Obtener cuenta Pro'), 'Header should localize the Pro account CTA for Spanish users.');
-assert(home.includes('✨ Pro member'), 'Header Pro badge should feel premium, not just a tiny plain Pro label.');
-assert(home.includes('from-amber-300/25') && home.includes('shadow-amber-300/20'), 'Pro badge should use a restrained gold premium treatment.');
+assert(home.includes('✨ Pro member'), 'Header Pro status should remain visible for Pro users.');
+assert(home.includes('const isProfileHydrating'), 'Header should avoid showing Get Pro account while an authenticated profile is still hydrating.');
+assert(home.includes('subscription?.status === "active" || subscription?.status === "trialing"'), 'Client Pro entitlement should accept trialing Stripe subscriptions just like the Dashboard gate.');
+assert(home.includes('text-amber-100') && home.includes('{userSession.email.split("@")[0]}'), 'Header Pro status should be plain bold text followed by the username, not another pill button.');
+assert(!home.includes('inline-flex items-center rounded-full border border-amber-300/40 bg-gradient-to-r from-amber-300/25 to-yellow-500/15 px-3 py-1 text-xs font-bold text-amber-100 shadow-lg shadow-amber-300/20'), 'Header Pro member status should not use a bordered/gold pill that resembles a button.');
 assert(home.includes('pro-result-panel'), 'Pro evaluations should render a premium result panel near the top, not feel like free results with extras appended.');
 assert(home.includes('Pro analysis unlocked'), 'Pro result panel should clearly announce the upgraded analysis experience.');
 assert(home.includes('Benchmark included') && home.includes('10-step plan ready'), 'Pro result panel should summarize benchmark and next-step plan benefits.');

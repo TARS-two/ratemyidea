@@ -212,7 +212,8 @@ export default function HomeClient() {
 
   const s = t[lang];
   const isCurrentPro = Boolean(userSession?.isPro || userProfile?.is_pro || evaluationMeta?.isPro);
-  const showHeaderUpgradeCta = !isCurrentPro;
+  const isProfileHydrating = Boolean(userSession && userProfile === null);
+  const showHeaderUpgradeCta = !isProfileHydrating && !isCurrentPro;
   const dashboardUrl = userSession ? `/dashboard?token=${encodeURIComponent(userSession.token)}` : "/";
 
   const hasSharedTodayForDisplay = userProfile && userProfile.last_share_date
@@ -274,7 +275,7 @@ export default function HomeClient() {
       .maybeSingle();
 
     if (!subscriptionError) {
-      const isPro = subscription?.plan === "pro" && subscription?.status === "active";
+      const isPro = subscription?.plan === "pro" && (subscription?.status === "active" || subscription?.status === "trialing");
       setUserProfile({
         is_pro: isPro,
         free_evaluations_left: subscription?.extra_credits ?? 0,
@@ -747,17 +748,26 @@ export default function HomeClient() {
                     >
                       Open dashboard
                     </a>
-                    <span className="inline-flex items-center rounded-full border border-amber-300/40 bg-gradient-to-r from-amber-300/25 to-yellow-500/15 px-3 py-1 text-xs font-bold text-amber-100 shadow-lg shadow-amber-300/20">
-                      ✨ Pro member
-                    </span>
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="font-bold text-amber-100">✨ Pro member</span>
+                      <span className="text-[var(--text-muted)]">·</span>
+                      <button
+                        onClick={handleSignOut}
+                        className="max-w-24 truncate font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                      >
+                        {userSession.email.split("@")[0]}
+                      </button>
+                    </div>
                   </>
                 )}
-                <button
-                  onClick={handleSignOut}
-                  className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer max-w-24 truncate"
-                >
-                  {userSession.email.split("@")[0]}
-                </button>
+                {!isCurrentPro && (
+                  <button
+                    onClick={handleSignOut}
+                    className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer max-w-24 truncate"
+                  >
+                    {userSession.email.split("@")[0]}
+                  </button>
+                )}
               </div>
             ) : (
               <button

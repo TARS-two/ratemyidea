@@ -69,6 +69,16 @@ interface EvaluationMeta {
   freeEvaluationsLeft: number;
 }
 
+interface HistoryEvaluation {
+  id: string;
+  idea_name: string | null;
+  idea_text: string;
+  overall_score: number | null;
+  category: string | null;
+  created_at: string;
+  result_json: ScoreResult | null;
+}
+
 /* ---------- score ring ---------- */
 function ScoreRing({ score }: { score: number }) {
   const circumference = 2 * Math.PI * 45;
@@ -208,13 +218,14 @@ export default function HomeClient() {
   const [benchmark, setBenchmark] = useState<BenchmarkData | null>(null);
   const [strategicPlan, setStrategicPlan] = useState<string | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
+  const [ideaHistory, setIdeaHistory] = useState<HistoryEvaluation[]>([]);
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
   const s = t[lang];
   const isCurrentPro = Boolean(userSession?.isPro || userProfile?.is_pro || evaluationMeta?.isPro);
   const isProfileHydrating = Boolean(userSession && userProfile === null);
   const showHeaderUpgradeCta = !isProfileHydrating && !isCurrentPro;
-  const dashboardUrl = userSession ? `/dashboard?token=${encodeURIComponent(userSession.token)}` : "/";
 
   const hasSharedTodayForDisplay = userProfile && userProfile.last_share_date
     ? new Date(userProfile.last_share_date).toDateString() === new Date().toDateString()
@@ -282,6 +293,8 @@ export default function HomeClient() {
         last_share_date: shareCredit?.created_at ?? null,
       });
       setShareCreditClaimed(Boolean(shareCredit?.created_at));
+      if (isPro) await fetchIdeaHistory(session.user.id);
+      else setIdeaHistory([]);
       const hydratedSession = { ...baseSession, isPro };
       setUserSession(hydratedSession);
       return hydratedSession;
@@ -358,11 +371,12 @@ export default function HomeClient() {
     localStorage.setItem("lang", next);
   }
 
-  function handleAuthSuccess(token: string, authEmail: string, userId: string) {
+  async function handleAuthSuccess(token: string, authEmail: string, userId: string) {
     const session: UserSession = { token, email: authEmail, userId, isPro: false };
     setUserSession(session);
     localStorage.setItem("rmi_session", JSON.stringify(session));
     setShowAuthModal(false);
+    await refreshUserAndProfile();
     if (claimShareCreditAfterAuth || localStorage.getItem(PENDING_SHARE_CREDIT_KEY) === "true") {
       setClaimShareCreditAfterAuth(false);
       void claimPendingShareCredit(token);
@@ -383,6 +397,36 @@ export default function HomeClient() {
         if (!data.insufficient) setBenchmark(data);
       }
     } catch { /* non-critical */ }
+  }
+
+  async function fetchIdeaHistory(userId: string) {
+    if (!supabase) return;
+    const { data, error } = await supabase
+      .from("evaluations")
+      .select("id, idea_name, idea_text, overall_score, category, created_at, result_json")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (error) {
+      console.error("Error fetching Pro history:", error);
+      return;
+    }
+
+    setIdeaHistory((data || []) as HistoryEvaluation[]);
+  }
+
+  function selectHistoryEvaluation(item: HistoryEvaluation) {
+    setSelectedHistoryId(item.id);
+    setIdea(item.idea_text);
+    setStrategicPlan(null);
+    setBenchmark(null);
+    if (item.result_json) {
+      setResult(item.result_json);
+      setEvaluationMeta({ isPro: true, freeEvaluationsUsed: 0, freeEvaluationsLeft: 0 });
+      if (item.result_json.category) void fetchBenchmark(item.result_json.overall, item.result_json.category);
+      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    }
   }
 
   async function handleGeneratePlan() {
@@ -467,6 +511,7 @@ export default function HomeClient() {
           last_share_date: prevProfile?.last_share_date ?? null,
         }));
         setUserSession(prev => prev ? { ...prev, isPro: true } : prev);
+        void fetchIdeaHistory(userSession.userId);
       } else if (userSession && !data.isPro) {
         setUserProfile(prevProfile => ({
           is_pro: false,
@@ -720,7 +765,7 @@ export default function HomeClient() {
               <button
                 onClick={startProCheckout}
                 disabled={proCheckoutLoading}
-                className="inline-flex items-center justify-center rounded-full border border-amber-300/30 bg-gradient-to-r from-amber-300/25 to-yellow-500/15 px-2.5 py-1.5 text-xs font-semibold text-amber-100 shadow-lg shadow-amber-300/20 transition-all hover:border-amber-200/60 hover:from-amber-300/35 disabled:opacity-60 sm:px-4"
+                className="inline-flex cursor-pointer items-center justify-center rounded-full border border-amber-300/30 bg-gradient-to-r from-amber-300/25 to-yellow-500/15 px-2.5 py-1.5 text-xs font-semibold text-amber-100 shadow-lg shadow-amber-300/20 transition-all hover:border-amber-200/60 hover:from-amber-300/35 disabled:opacity-60 sm:px-4"
               >
                 {proCheckoutLoading ? (
                   lang === "es" ? "..." : "..."
@@ -743,10 +788,10 @@ export default function HomeClient() {
                 {isCurrentPro && (
                   <>
                     <a
-                      href={dashboardUrl}
+                      href="#pro-history"
                       className="hidden items-center rounded-xl bg-[var(--electric)] px-3 py-1.5 text-xs font-bold text-white shadow-lg shadow-[var(--electric)]/20 transition-all hover:bg-[var(--electric-dark)] sm:inline-flex"
                     >
-                      Open dashboard
+                      Idea history
                     </a>
                     <div className="flex items-center gap-1.5 text-xs">
                       <span className="font-bold text-amber-100">✨ Pro member</span>
@@ -884,6 +929,57 @@ export default function HomeClient() {
             </form>
           )}
 
+          {isCurrentPro && (
+            <section id="pro-history" className="mt-8 rounded-3xl border border-white/10 bg-[var(--surface)]/80 p-5 shadow-xl shadow-black/10">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-200">Pro history</p>
+                  <h2 className="mt-1 text-xl font-bold text-[var(--text-primary)]">
+                    {lang === "es" ? "Historial de ideas" : "Idea history"}
+                  </h2>
+                </div>
+                <span className="rounded-full bg-black/20 px-2.5 py-1 text-xs text-[var(--text-muted)]">
+                  {ideaHistory.length}
+                </span>
+              </div>
+
+              {ideaHistory.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-5 text-center text-sm text-[var(--text-muted)]">
+                  {lang === "es" ? "Tus evaluaciones Pro aparecerán aquí después de correrlas." : "Your Pro evaluations will appear here after you run them."}
+                </div>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {ideaHistory.map((item) => {
+                    const active = selectedHistoryId === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => selectHistoryEvaluation(item)}
+                        className={`rounded-2xl border p-4 text-left transition-all cursor-pointer ${active
+                          ? "border-[var(--electric)]/60 bg-[var(--electric)]/10"
+                          : "border-white/10 bg-black/20 hover:border-[var(--electric)]/30"}`}
+                      >
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                            {item.idea_name || item.idea_text.slice(0, 56)}
+                          </span>
+                          <span className="text-sm font-bold text-amber-100">
+                            {(item.overall_score || 0).toFixed(1)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
+                          <span>{item.category || "Idea"}</span>
+                          <span>{new Date(item.created_at).toLocaleDateString(lang === "es" ? "es-MX" : "en-US", { month: "short", day: "numeric" })}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          )}
+
           {/* Results */}
           {result && (
             <div ref={resultRef} className="space-y-8 animate-fade-up">
@@ -917,10 +1013,10 @@ export default function HomeClient() {
                         <p className="mt-1 text-[var(--text-muted)]">{lang === "es" ? "Créditos Pro" : "Pro credits"}</p>
                       </div>
                       <a
-                        href={dashboardUrl}
+                        href="#pro-history"
                         className="col-span-2 rounded-xl bg-[var(--electric)] px-4 py-2.5 text-center text-xs font-bold text-white transition-all hover:bg-[var(--electric-dark)]"
                       >
-                        Review this in Dashboard
+                        {lang === "es" ? "Ver historial Pro" : "View Pro history"}
                       </a>
                     </div>
                   </div>

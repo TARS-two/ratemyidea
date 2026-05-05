@@ -175,6 +175,7 @@ export default function HomeClient() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [evaluationMeta, setEvaluationMeta] = useState<EvaluationMeta | null>(null);
   const [claimShareCreditAfterAuth, setClaimShareCreditAfterAuth] = useState(false);
+  const [shareCreditClaimed, setShareCreditClaimed] = useState(false);
   const [benchmark, setBenchmark] = useState<BenchmarkData | null>(null);
   const [strategicPlan, setStrategicPlan] = useState<string | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
@@ -190,7 +191,8 @@ export default function HomeClient() {
     evaluationMeta &&
     !isCurrentPro &&
     evaluationMeta.freeEvaluationsLeft === 0 &&
-    !hasSharedTodayForDisplay
+    !hasSharedTodayForDisplay &&
+    !shareCreditClaimed
   );
   const shouldShowFinalFreeCta = Boolean(
     evaluationMeta &&
@@ -198,66 +200,103 @@ export default function HomeClient() {
     evaluationMeta.freeEvaluationsLeft === 0
   );
 
+  async function refreshUserAndProfile() {
+    if (!supabase) {
+      console.error("Supabase client is not configured.");
+      return null;
+    }
+
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      console.error("Error fetching Supabase session:", sessionError);
+      return null;
+    }
+
+    if (!session) return null;
+
+    const baseSession: UserSession = {
+      token: session.access_token,
+      email: session.user.email || "",
+      userId: session.user.id,
+      isPro: false,
+    };
+    setUserSession(baseSession);
+
+    const { data: subscription, error: subscriptionError } = await supabase
+      .from("user_subscriptions")
+      .select("plan, status, extra_credits")
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const { data: shareCredit } = await supabase
+      .from("share_tokens")
+      .select("created_at")
+      .eq("sharer_user_id", session.user.id)
+      .is("evaluation_id", null)
+      .gte("created_at", today.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!subscriptionError) {
+      const isPro = subscription?.plan === "pro" && subscription?.status === "active";
+      setUserProfile({
+        is_pro: isPro,
+        free_evaluations_left: subscription?.extra_credits ?? 0,
+        last_share_date: shareCredit?.created_at ?? null,
+      });
+      setShareCreditClaimed(Boolean(shareCredit?.created_at));
+      const hydratedSession = { ...baseSession, isPro };
+      setUserSession(hydratedSession);
+      return hydratedSession;
+    }
+
+    console.error("Error fetching user subscription:", subscriptionError);
+    return baseSession;
+  }
+
   // Load lang + session from localStorage and Supabase on mount
   useEffect(() => {
     const savedLang = localStorage.getItem("lang");
     if (savedLang === "en" || savedLang === "es") setLang(savedLang);
 
-    async function fetchUserAndProfile() {
-      if (!supabase) {
-        console.error("Supabase client is not configured.");
-        return;
-      }
+    async function boot() {
+      const session = await refreshUserAndProfile();
+      const params = new URLSearchParams(window.location.search);
+      const checkoutSessionId = params.get("session_id");
 
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError) {
-        console.error("Error fetching Supabase session:", sessionError);
-        return;
-      }
-
-      if (session) {
-        setUserSession({
-          token: session.access_token,
-          email: session.user.email || "",
-          userId: session.user.id,
-          isPro: false,
-        });
-
-        const { data: subscription, error: subscriptionError } = await supabase
-          .from("user_subscriptions")
-          .select("plan, status, extra_credits")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-
-        const today = new Date();
-        today.setUTCHours(0, 0, 0, 0);
-
-        const { data: shareCredit } = await supabase
-          .from("share_tokens")
-          .select("created_at")
-          .eq("sharer_user_id", session.user.id)
-          .is("evaluation_id", null)
-          .gte("created_at", today.toISOString())
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!subscriptionError) {
-          const isPro = subscription?.plan === "pro" && subscription?.status === "active";
-          setUserProfile({
-            is_pro: isPro,
-            free_evaluations_left: subscription?.extra_credits ?? 0,
-            last_share_date: shareCredit?.created_at ?? null,
+      if (params.get("subscribed") === "true" && checkoutSessionId && session?.token) {
+        try {
+          const response = await fetch("/api/stripe/confirm", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId: checkoutSessionId, authToken: session.token }),
           });
-          setUserSession(prev => prev ? { ...prev, isPro } : null);
-        } else {
-          console.error("Error fetching user subscription:", subscriptionError);
+          const data = await response.json();
+          if (response.ok && data.isPro) {
+            setUserProfile(prevProfile => ({
+              is_pro: true,
+              free_evaluations_left: prevProfile?.free_evaluations_left ?? 0,
+              last_share_date: prevProfile?.last_share_date ?? null,
+            }));
+            setUserSession(prev => prev ? { ...prev, isPro: true } : prev);
+            await refreshUserAndProfile();
+          } else if (!response.ok) {
+            console.error("Could not confirm Pro checkout:", data.error);
+          }
+        } catch (error) {
+          console.error("Could not confirm Pro checkout:", error);
+        } finally {
+          window.history.replaceState({}, "", window.location.pathname);
         }
       }
     }
 
-    fetchUserAndProfile();
+    boot();
   }, []);
 
   useEffect(() => {
@@ -478,6 +517,7 @@ export default function HomeClient() {
       });
       const data = await response.json();
       if (response.ok) {
+        setShareCreditClaimed(true);
         setUserProfile(prevProfile => prevProfile ? {
           ...prevProfile,
           free_evaluations_left: data.freeEvaluationsLeft !== undefined ? data.freeEvaluationsLeft : prevProfile.free_evaluations_left + 1,
@@ -500,6 +540,18 @@ export default function HomeClient() {
     return false;
   }
 
+  async function handlePostShareCreditClaim() {
+    if (!canClaimShareCredit) return;
+    if (!userSession) {
+      setClaimShareCreditAfterAuth(true);
+      setAuthModalMode("claim-credit");
+      setShowShareModal(false);
+      setShowAuthModal(true);
+      return;
+    }
+    await claimShareCredit(userSession.token);
+  }
+
   async function handleShareWithImage(target?: "whatsapp" | "twitter" | "linkedin") {
     const file = await getShareImage();
     const text = getShareText();
@@ -511,6 +563,7 @@ export default function HomeClient() {
           text,
           files: [file],
         });
+        await handlePostShareCreditClaim();
         return;
       } catch {
         // User cancelled or error — fall through to platform-specific
@@ -537,17 +590,7 @@ export default function HomeClient() {
         setShared(true);
         setTimeout(() => setShared(false), 2000);
     }
-  }
-
-  async function handleClaimShareCredit() {
-    if (!canClaimShareCredit) return;
-    if (!userSession) {
-      setClaimShareCreditAfterAuth(true);
-      setAuthModalMode("claim-credit");
-      setShowAuthModal(true);
-      return;
-    }
-    await claimShareCredit(userSession.token);
+    await handlePostShareCreditClaim();
   }
 
   function handleCopyText() {
@@ -557,6 +600,12 @@ export default function HomeClient() {
   }
 
   async function startProCheckout() {
+    if (!userSession) {
+      setAuthModalMode("upgrade");
+      setShowAuthModal(true);
+      return;
+    }
+
     setProCheckoutLoading(true);
     setError("");
     try {
@@ -588,6 +637,9 @@ export default function HomeClient() {
     setEmail("");
     setError("");
     setHideIdea(false);
+    setEvaluationMeta(null);
+    setBenchmark(null);
+    setStrategicPlan(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -596,11 +648,22 @@ export default function HomeClient() {
       {/* Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[var(--midnight)]/80 backdrop-blur-xl border-b border-white/5">
         <div className="mx-auto max-w-5xl flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🧠</span>
-            <span className="font-bold text-lg tracking-tight">
-              {s.brand}
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🧠</span>
+              <span className="font-bold text-lg tracking-tight">
+                {s.brand}
+              </span>
+            </div>
+            <a
+              href="https://ai-norte.com"
+              className="items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--electric-light)] transition-colors hidden sm:flex"
+              target="_blank" rel="noopener"
+            >
+              <span>by</span>
+              <img src="/ainorte-logo.svg" alt="AI Norte" className="h-4 w-4" />
+              <span className="text-[var(--electric-light)]">AI Norte</span>
+            </a>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -617,11 +680,6 @@ export default function HomeClient() {
                 {isCurrentPro && (
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--electric)]/20 text-[var(--electric-light)]">Pro</span>
                 )}
-                {isCurrentPro && (
-                  <a href={`/history?token=${encodeURIComponent(userSession.token)}`} className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors hidden sm:block">
-                    History
-                  </a>
-                )}
                 <button
                   onClick={handleSignOut}
                   className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
@@ -637,16 +695,6 @@ export default function HomeClient() {
                 {lang === "es" ? "Iniciar sesión" : "Sign in"}
               </button>
             )}
-
-            <a
-              href="https://ai-norte.com"
-              className="items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--electric-light)] transition-colors hidden sm:flex"
-              target="_blank" rel="noopener"
-            >
-              <span>by</span>
-              <img src="/ainorte-logo.svg" alt="AI Norte" className="h-4 w-4" />
-              <span className="text-[var(--electric-light)]">AI Norte</span>
-            </a>
           </div>
         </div>
       </nav>
@@ -874,18 +922,11 @@ export default function HomeClient() {
 
               {/* Pro member status */}
               {isCurrentPro && (
-                <div className="bg-[var(--surface)] border border-[var(--electric)]/30 rounded-2xl p-5 flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-wider text-[var(--electric-light)] font-semibold">Pro member</p>
-                    <p className="text-sm text-[var(--text-secondary)] mt-1">
-                      {lang === "es" ? "Evaluaciones ilimitadas, benchmark e historial activos." : "Unlimited evaluations, benchmark, and history are active."}
-                    </p>
-                  </div>
-                  {userSession && (
-                    <a href={`/history?token=${encodeURIComponent(userSession.token)}`} className="text-sm px-4 py-2 rounded-xl bg-[var(--electric)] text-white font-medium hover:bg-[var(--electric-dark)] transition-colors">
-                      History
-                    </a>
-                  )}
+                <div className="bg-[var(--surface)] border border-[var(--electric)]/30 rounded-2xl p-5 text-center">
+                  <p className="text-xs uppercase tracking-wider text-[var(--electric-light)] font-semibold">Pro member</p>
+                  <p className="text-sm text-[var(--text-secondary)] mt-1">
+                    {lang === "es" ? "Evaluaciones ilimitadas, benchmark e historial activos." : "Unlimited evaluations, benchmark, and history are active."}
+                  </p>
                 </div>
               )}
 
@@ -898,7 +939,7 @@ export default function HomeClient() {
               {strategicPlan ? (
                 <div className="bg-[var(--surface)] border border-white/10 rounded-2xl p-6">
                   <h3 className="font-semibold text-[var(--electric-light)] mb-3">
-                    🗓️ {lang === "es" ? "Plan estratégico 30 días" : "30-Day Strategic Plan"}
+                    🧭 {lang === "es" ? "10 siguientes pasos" : "10 Next Steps"}
                   </h3>
                   <div className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap leading-relaxed">
                     {strategicPlan}
@@ -907,42 +948,38 @@ export default function HomeClient() {
               ) : isCurrentPro ? (
                 <div className="bg-[var(--surface)] border border-white/10 rounded-2xl p-6 text-center">
                   <p className="text-sm text-[var(--text-muted)] mb-3">
-                    {lang === "es" ? "Genera un plan de acción de 30 días para esta idea" : "Generate a 30-day action plan for this idea"}
+                    {lang === "es" ? "Genera 10 siguientes pasos concretos para esta idea" : "Generate 10 concrete next steps for this idea"}
                   </p>
                   <button
                     onClick={handleGeneratePlan}
                     disabled={planLoading}
                     className="px-6 py-2.5 bg-[var(--electric)] hover:bg-[var(--electric-dark)] disabled:opacity-50 text-white font-medium rounded-xl transition-all cursor-pointer text-sm"
                   >
-                    {planLoading ? "Generating..." : (lang === "es" ? "🗓️ Generar plan 30 días" : "🗓️ Generate 30-day plan")}
+                    {planLoading ? "Generating..." : (lang === "es" ? "🧭 Generar 10 pasos" : "🧭 Generate 10 steps")}
                   </button>
                 </div>
               ) : null}
 
               {/* Pro CTA for free users */}
               {!isCurrentPro && (
-                <div className="bg-[var(--surface)] border border-[var(--electric)]/20 rounded-2xl p-6">
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">⚡</span>
-                    <div className="flex-1 text-center">
-                      <h3 className="font-bold mb-1">
-                        {lang === "es" ? "Upgrade a Pro — $9/mes" : "Upgrade to Pro — $9/mo"}
-                      </h3>
-                      <ul className="text-sm text-[var(--text-muted)] space-y-1 mb-4 inline-block text-left">
-                        <li>✓ {lang === "es" ? "Evaluaciones ilimitadas" : "Unlimited evaluations"}</li>
-                        <li>✓ {lang === "es" ? "Historial de ideas" : "Idea history"}</li>
-                        <li>✓ {lang === "es" ? "5 planes estratégicos 30 días/mes" : "5 strategic plans/month"}</li>
-                        <li>✓ {lang === "es" ? "Benchmark vs otras ideas" : "Benchmark vs other ideas"}</li>
-                      </ul>
-                      <button
-                        onClick={startProCheckout}
-                        disabled={proCheckoutLoading}
-                        className="mt-4 mx-auto px-5 py-2.5 bg-[var(--electric)] hover:bg-[var(--electric-dark)] disabled:opacity-50 text-white font-semibold rounded-xl transition-all cursor-pointer text-sm block w-fit"
-                      >
-                        {proCheckoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "Activar Pro" : "Get Pro")}
-                      </button>
-                    </div>
-                  </div>
+                <div className="bg-[var(--surface)] border border-[var(--electric)]/20 rounded-2xl p-6 text-center">
+                  <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--electric)]/10 text-2xl">⚡</div>
+                  <h3 className="font-bold mb-1">
+                    {lang === "es" ? "Upgrade a Pro — $9/mes" : "Upgrade to Pro — $9/mo"}
+                  </h3>
+                  <ul className="text-sm text-[var(--text-muted)] space-y-1 mb-4 inline-block text-left">
+                    <li>✓ {lang === "es" ? "Evaluaciones ilimitadas" : "Unlimited evaluations"}</li>
+                    <li>✓ {lang === "es" ? "Historial de ideas" : "Idea history"}</li>
+                    <li>✓ {lang === "es" ? "5 planes de 10 pasos/mes" : "5 ten-step plans/month"}</li>
+                    <li>✓ {lang === "es" ? "Benchmark vs otras ideas" : "Benchmark vs other ideas"}</li>
+                  </ul>
+                  <button
+                    onClick={startProCheckout}
+                    disabled={proCheckoutLoading}
+                    className="mt-4 mx-auto px-5 py-2.5 bg-[var(--electric)] hover:bg-[var(--electric-dark)] disabled:opacity-50 text-white font-semibold rounded-xl transition-all cursor-pointer text-sm block w-fit"
+                  >
+                    {proCheckoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "Activar Pro" : "Get Pro")}
+                  </button>
                 </div>
               )}
 
@@ -1141,15 +1178,6 @@ export default function HomeClient() {
                   </span>
                 )}
               </button>
-
-              {canClaimShareCredit && (
-                <button
-                  onClick={handleClaimShareCredit}
-                  className="w-full py-3 bg-green-500/10 border border-green-500/30 text-green-300 font-semibold rounded-xl hover:bg-green-500/15 transition-all cursor-pointer text-sm"
-                >
-                  {lang === "es" ? "Reclamar +1 evaluación gratis" : "Claim +1 free evaluation"}
-                </button>
-              )}
 
               {/* Secondary row: Save + Copy */}
               <div className="grid grid-cols-2 gap-2">

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       customer_email: email || undefined,
       metadata,
       subscription_data: { metadata },
-      success_url: `${BASE_URL}/?subscribed=true`,
+      success_url: `${BASE_URL}/?subscribed=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${BASE_URL}/`,
     });
 

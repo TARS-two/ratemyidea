@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const NEXT_STEPS_MODEL = process.env.NEXT_STEPS_MODEL || "claude-sonnet-4-20250514";
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,10 +47,10 @@ export async function POST(request: NextRequest) {
       }, { status: 429 });
     }
 
-    // Generate plan with Claude
+    // Generate 10 practical next steps with a cheaper configurable model
     const prompt = lang === "es"
-      ? `Genera un plan estratégico detallado de 30 días para esta idea de negocio: "${ideaName || ideaText.slice(0, 100)}"\n\nDescripción: ${ideaText}\n\nEstructura el plan en 4 semanas con tareas específicas y accionables para cada semana. Incluye actividades de validación, desarrollo inicial, marketing y ventas. Sé concreto y práctico.`
-      : `Generate a detailed 30-day strategic action plan for this business idea: "${ideaName || ideaText.slice(0, 100)}"\n\nDescription: ${ideaText}\n\nStructure the plan into 4 weeks with specific, actionable tasks for each week. Include validation activities, initial development, marketing, and sales tasks. Be concrete and practical.`;
+      ? `Genera exactamente 10 siguientes pasos concretos para esta idea de negocio: "${ideaName || ideaText.slice(0, 100)}"\n\nDescripción: ${ideaText}\n\nReglas:\n- No hagas un plan de 30 días.\n- Lista pasos numerados del 1 al 10.\n- Cada paso debe ser accionable, específico y ejecutable por una persona o equipo pequeño.\n- Ordena los pasos para que escalen la misma idea sin repetir acciones.\n- Incluye validación, oferta, primer canal comercial y una métrica de éxito.\n- Sé breve: máximo 2 frases por paso.`
+      : `Generate exactly 10 concrete next steps for this business idea: "${ideaName || ideaText.slice(0, 100)}"\n\nDescription: ${ideaText}\n\nRules:\n- Do not create a 30-day plan.\n- List numbered steps from 1 to 10.\n- Each step must be actionable, specific, and doable by one person or a small team.\n- Order the steps so they scale the same idea without repeating actions.\n- Include validation, offer, first sales channel, and one success metric.\n- Be concise: max 2 sentences per step.`;
 
     const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -59,8 +60,8 @@ export async function POST(request: NextRequest) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2000,
+        model: NEXT_STEPS_MODEL,
+        max_tokens: 1000,
         messages: [{ role: "user", content: prompt }],
       }),
     });

@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
     if (subscription?.plan === "pro" && subscription?.status === "active") {
       return NextResponse.json({
         message: "Pro user, no extra free credit needed.",
+        granted: false,
         freeEvaluationsLeft: subscription.extra_credits ?? 0,
       });
     }
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
     if (existingCredit) {
       return NextResponse.json({
         message: "Extra evaluation already granted for today.",
+        granted: false,
         freeEvaluationsLeft: subscription?.extra_credits ?? 0,
         lastShareDate: existingCredit.created_at,
       });
@@ -107,6 +109,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       message: "Extra evaluation granted!",
+      granted: true,
       freeEvaluationsLeft: nextExtraCredits,
       lastShareDate: now,
     });

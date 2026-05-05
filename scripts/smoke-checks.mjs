@@ -89,6 +89,7 @@ assert(home.includes('handleShareWithImage') && home.includes('handleDownloadIma
 
 assert(historyPage.includes('user_subscriptions') && historyPage.includes('subscription?.plan !== "pro"'), 'History page should be gated to Pro subscribers server-side.');
 assert(dashboardPage.includes('Dashboard Pro') && dashboardPage.includes('user_subscriptions'), 'Dashboard Pro MVP should exist and be gated to Pro subscribers.');
+assert(dashboardPage.includes('subscription?.status !== "active" && subscription?.status !== "trialing"'), 'Dashboard Pro gate should accept trialing Stripe subscriptions just like the Pro entitlement flow.');
 assert(dashboardPage.includes('left sidebar') || dashboardPage.includes('Pro ideas'), 'Dashboard should include a left sidebar with clickable history.');
 assert(dashboardPage.includes('selectedEvaluation'), 'Dashboard should render a central selected evaluation panel.');
 assert(dashboardPage.includes('✨ Pro member'), 'Dashboard should show the premium Pro badge.');
@@ -96,6 +97,9 @@ assert(dashboardPage.includes('Benchmark chart'), 'Dashboard should include a be
 assert(dashboardPage.includes('5 next-step plans left this month'), 'Dashboard should show the monthly next-step plan counter copy.');
 assert(dashboardPage.includes('Generate 10 next steps') && dashboardPage.includes('New evaluation'), 'Dashboard should include Generate 10 next steps and New evaluation actions.');
 assert(home.includes('/dashboard?token=') && home.includes('Dashboard'), 'Pro header should link to Dashboard, not a standalone History page.');
+assert(home.includes('const dashboardUrl') && home.includes('href={dashboardUrl}'), 'Dashboard links should reuse one encoded URL instead of duplicating brittle href logic.');
+assert(home.includes('Open dashboard') && home.includes('bg-[var(--electric)]'), 'Dashboard should look like a clickable button and be visually distinct from the Pro member badge.');
+assert(home.includes('Review this in Dashboard'), 'Pro result should include a Dashboard CTA that keeps the user in the Pro workflow.');
 assert(strategicPlanRoute.includes('NEXT_STEPS_MODEL') && strategicPlanRoute.includes('max_tokens: 1000'), 'Next-step generation should use a configurable model and lower token cap than the old 30-day plan.');
 assert(strategicPlanRoute.includes('exactly 10 concrete next steps') && strategicPlanRoute.includes('exactamente 10 siguientes pasos'), 'Strategic plan endpoint should now generate 10 next steps, not a 30-day plan.');
 

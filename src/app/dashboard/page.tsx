@@ -70,7 +70,7 @@ export default async function DashboardPage({
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (subscription?.plan !== "pro" || subscription?.status !== "active") {
+  if (subscription?.plan !== "pro" || (subscription?.status !== "active" && subscription?.status !== "trialing")) {
     redirect("/?upgrade=required");
   }
 

@@ -213,6 +213,7 @@ export default function HomeClient() {
   const s = t[lang];
   const isCurrentPro = Boolean(userSession?.isPro || userProfile?.is_pro || evaluationMeta?.isPro);
   const showHeaderUpgradeCta = !isCurrentPro;
+  const dashboardUrl = userSession ? `/dashboard?token=${encodeURIComponent(userSession.token)}` : "/";
 
   const hasSharedTodayForDisplay = userProfile && userProfile.last_share_date
     ? new Date(userProfile.last_share_date).toDateString() === new Date().toDateString()
@@ -741,10 +742,10 @@ export default function HomeClient() {
                 {isCurrentPro && (
                   <>
                     <a
-                      href={`/dashboard?token=${encodeURIComponent(userSession.token)}`}
-                      className="hidden rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-semibold text-[var(--text-secondary)] transition-all hover:border-[var(--electric)]/40 hover:text-[var(--text-primary)] sm:inline-flex"
+                      href={dashboardUrl}
+                      className="hidden items-center rounded-xl bg-[var(--electric)] px-3 py-1.5 text-xs font-bold text-white shadow-lg shadow-[var(--electric)]/20 transition-all hover:bg-[var(--electric-dark)] sm:inline-flex"
                     >
-                      Dashboard
+                      Open dashboard
                     </a>
                     <span className="inline-flex items-center rounded-full border border-amber-300/40 bg-gradient-to-r from-amber-300/25 to-yellow-500/15 px-3 py-1 text-xs font-bold text-amber-100 shadow-lg shadow-amber-300/20">
                       ✨ Pro member
@@ -905,6 +906,12 @@ export default function HomeClient() {
                         <p className="font-semibold text-amber-100">10-step plan ready</p>
                         <p className="mt-1 text-[var(--text-muted)]">{lang === "es" ? "Créditos Pro" : "Pro credits"}</p>
                       </div>
+                      <a
+                        href={dashboardUrl}
+                        className="col-span-2 rounded-xl bg-[var(--electric)] px-4 py-2.5 text-center text-xs font-bold text-white transition-all hover:bg-[var(--electric-dark)]"
+                      >
+                        Review this in Dashboard
+                      </a>
                     </div>
                   </div>
                 </section>

@@ -57,6 +57,11 @@ assert(!home.includes('disabled={checkoutLoading}'), 'A shared checkoutLoading f
 assert(home.includes('const isCurrentPro'), 'Result UI should use a single current Pro state instead of stale userSession checks.');
 assert(home.includes('isCurrentPro && benchmark'), 'Benchmark should render from the current Pro state.');
 assert(home.includes('isCurrentPro && (') && home.includes('Pro member'), 'Pro users should see a visible Pro member indicator beyond the small nav badge.');
+assert(home.includes('showHeaderUpgradeCta'), 'Header should explicitly decide when to show the Pro upgrade CTA.');
+assert(home.includes('Get Pro account'), 'Header should show Get Pro account CTA for anonymous/free users.');
+assert(home.includes('Obtener cuenta Pro'), 'Header should localize the Pro account CTA for Spanish users.');
+assert(home.includes('✨ Pro member'), 'Header Pro badge should feel premium, not just a tiny plain Pro label.');
+assert(home.includes('from-amber-300/25') && home.includes('shadow-amber-300/20'), 'Pro badge should use a restrained gold premium treatment.');
 assert(!home.includes('href={`/history?token=${encodeURIComponent(userSession.token)}`}'), 'Header should not show a standalone History link; Pro history belongs inside the dashboard.');
 assert(!home.includes('<a href="/history"'), 'History link without token is broken and should not render.');
 assert(!home.includes('handleClaimShareCredit'), 'Claiming +1 free evaluation should not be a separate share-modal action.');

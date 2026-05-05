@@ -183,6 +183,7 @@ export default function HomeClient() {
 
   const s = t[lang];
   const isCurrentPro = Boolean(userSession?.isPro || userProfile?.is_pro || evaluationMeta?.isPro);
+  const showHeaderUpgradeCta = !isCurrentPro;
 
   const hasSharedTodayForDisplay = userProfile && userProfile.last_share_date
     ? new Date(userProfile.last_share_date).toDateString() === new Date().toDateString()
@@ -665,7 +666,7 @@ export default function HomeClient() {
               <span className="text-[var(--electric-light)]">AI Norte</span>
             </a>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={toggleLang}
               className="text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
@@ -675,14 +676,38 @@ export default function HomeClient() {
               <span className={lang === "es" ? "text-[var(--text-primary)]" : ""}>ES</span>
             </button>
 
+            {showHeaderUpgradeCta && (
+              <button
+                onClick={startProCheckout}
+                disabled={proCheckoutLoading}
+                className="inline-flex items-center justify-center rounded-full border border-amber-300/30 bg-gradient-to-r from-amber-300/25 to-yellow-500/15 px-2.5 py-1.5 text-xs font-semibold text-amber-100 shadow-lg shadow-amber-300/20 transition-all hover:border-amber-200/60 hover:from-amber-300/35 disabled:opacity-60 sm:px-4"
+              >
+                {proCheckoutLoading ? (
+                  lang === "es" ? "..." : "..."
+                ) : lang === "es" ? (
+                  <>
+                    <span className="sm:hidden">Pro</span>
+                    <span className="hidden sm:inline">Obtener cuenta Pro</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="sm:hidden">Pro</span>
+                    <span className="hidden sm:inline">Get Pro account</span>
+                  </>
+                )}
+              </button>
+            )}
+
             {userSession ? (
               <div className="flex items-center gap-2">
                 {isCurrentPro && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--electric)]/20 text-[var(--electric-light)]">Pro</span>
+                  <span className="inline-flex items-center rounded-full border border-amber-300/40 bg-gradient-to-r from-amber-300/25 to-yellow-500/15 px-3 py-1 text-xs font-bold text-amber-100 shadow-lg shadow-amber-300/20">
+                    ✨ Pro member
+                  </span>
                 )}
                 <button
                   onClick={handleSignOut}
-                  className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                  className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer max-w-24 truncate"
                 >
                   {userSession.email.split("@")[0]}
                 </button>

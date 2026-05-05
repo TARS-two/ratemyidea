@@ -830,6 +830,40 @@ export default function HomeClient() {
           {/* Results */}
           {result && (
             <div ref={resultRef} className="space-y-8 animate-fade-up">
+              {isCurrentPro && (
+                <section
+                  data-testid="pro-result-panel"
+                  className="relative overflow-hidden rounded-3xl border border-amber-300/30 bg-gradient-to-br from-amber-300/15 via-[var(--surface)] to-[var(--electric)]/10 p-6 shadow-2xl shadow-amber-300/10"
+                >
+                  <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-amber-300/20 blur-3xl" />
+                  <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.25em] text-amber-200">
+                        ✨ Pro analysis unlocked
+                      </p>
+                      <h2 className="mt-2 text-2xl font-bold text-[var(--text-primary)]">
+                        {lang === "es" ? "Tu evaluación Pro está lista" : "Your Pro evaluation is ready"}
+                      </h2>
+                      <p className="mt-2 max-w-xl text-sm text-[var(--text-secondary)]">
+                        {lang === "es"
+                          ? "Además del score base, esta vista conecta benchmark, historial y plan de acción para decidir el siguiente movimiento."
+                          : "Beyond the base score, this view connects benchmark, history, and an action plan so you can decide the next move."}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs sm:min-w-64">
+                      <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                        <p className="font-semibold text-amber-100">Benchmark included</p>
+                        <p className="mt-1 text-[var(--text-muted)]">{lang === "es" ? "Comparación activa" : "Comparison active"}</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                        <p className="font-semibold text-amber-100">10-step plan ready</p>
+                        <p className="mt-1 text-[var(--text-muted)]">{lang === "es" ? "Créditos Pro" : "Pro credits"}</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
               {/* Overall Score */}
               <div className="bg-[var(--surface)] border border-white/10 rounded-2xl p-8 text-center">
                 <p className="text-sm text-[var(--text-muted)] uppercase tracking-wider mb-4">
@@ -945,19 +979,22 @@ export default function HomeClient() {
                 </div>
               )}
 
-              {/* Pro member status */}
-              {isCurrentPro && (
-                <div className="bg-[var(--surface)] border border-[var(--electric)]/30 rounded-2xl p-5 text-center">
-                  <p className="text-xs uppercase tracking-wider text-[var(--electric-light)] font-semibold">Pro member</p>
-                  <p className="text-sm text-[var(--text-secondary)] mt-1">
-                    {lang === "es" ? "Evaluaciones ilimitadas, benchmark e historial activos." : "Unlimited evaluations, benchmark, and history are active."}
-                  </p>
-                </div>
-              )}
-
               {/* Benchmark */}
               {isCurrentPro && benchmark && (
-                <BenchmarkChart data={benchmark} userScore={result.overall} lang={lang} />
+                <section className="rounded-3xl border border-amber-300/20 bg-[var(--surface)] p-5 shadow-xl shadow-black/10">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-200">Pro insight benchmark</p>
+                      <h3 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+                        {lang === "es" ? "Cómo se compara esta idea" : "How this idea compares"}
+                      </h3>
+                    </div>
+                    <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-xs font-semibold text-amber-100">
+                      {lang === "es" ? "Solo Pro" : "Pro only"}
+                    </span>
+                  </div>
+                  <BenchmarkChart data={benchmark} userScore={result.overall} lang={lang} />
+                </section>
               )}
 
               {/* Strategic Plan */}
@@ -971,14 +1008,22 @@ export default function HomeClient() {
                   </div>
                 </div>
               ) : isCurrentPro ? (
-                <div className="bg-[var(--surface)] border border-white/10 rounded-2xl p-6 text-center">
-                  <p className="text-sm text-[var(--text-muted)] mb-3">
-                    {lang === "es" ? "Genera 10 siguientes pasos concretos para esta idea" : "Generate 10 concrete next steps for this idea"}
+                <div className="relative overflow-hidden rounded-3xl border border-[var(--electric)]/30 bg-gradient-to-br from-[var(--electric)]/20 via-[var(--surface)] to-amber-300/10 p-6 text-center shadow-xl shadow-[var(--electric)]/10">
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--electric-light)]">
+                    {lang === "es" ? "Siguiente movimiento" : "Next move"}
+                  </p>
+                  <h3 className="mt-2 text-xl font-bold text-[var(--text-primary)]">
+                    {lang === "es" ? "Construye el plan de acción de 10 pasos" : "Build the 10-step action plan"}
+                  </h3>
+                  <p className="mx-auto mt-2 max-w-md text-sm text-[var(--text-secondary)]">
+                    {lang === "es"
+                      ? "Convierte esta evaluación en una secuencia concreta de decisiones, pruebas y entregables."
+                      : "Turn this evaluation into a concrete sequence of decisions, tests, and deliverables."}
                   </p>
                   <button
                     onClick={handleGeneratePlan}
                     disabled={planLoading}
-                    className="px-6 py-2.5 bg-[var(--electric)] hover:bg-[var(--electric-dark)] disabled:opacity-50 text-white font-medium rounded-xl transition-all cursor-pointer text-sm"
+                    className="mt-5 px-7 py-3 bg-[var(--electric)] hover:bg-[var(--electric-dark)] disabled:opacity-50 text-white font-semibold rounded-xl transition-all cursor-pointer text-sm glow-pulse"
                   >
                     {planLoading ? "Generating..." : (lang === "es" ? "🧭 Generar 10 pasos" : "🧭 Generate 10 steps")}
                   </button>

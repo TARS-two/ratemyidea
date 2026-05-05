@@ -62,6 +62,14 @@ assert(home.includes('Get Pro account'), 'Header should show Get Pro account CTA
 assert(home.includes('Obtener cuenta Pro'), 'Header should localize the Pro account CTA for Spanish users.');
 assert(home.includes('✨ Pro member'), 'Header Pro badge should feel premium, not just a tiny plain Pro label.');
 assert(home.includes('from-amber-300/25') && home.includes('shadow-amber-300/20'), 'Pro badge should use a restrained gold premium treatment.');
+assert(home.includes('pro-result-panel'), 'Pro evaluations should render a premium result panel near the top, not feel like free results with extras appended.');
+assert(home.includes('Pro analysis unlocked'), 'Pro result panel should clearly announce the upgraded analysis experience.');
+assert(home.includes('Benchmark included') && home.includes('10-step plan ready'), 'Pro result panel should summarize benchmark and next-step plan benefits.');
+assert(home.includes('Pro insight benchmark'), 'Benchmark should be framed as a Pro insight section.');
+assert(home.includes('Build the 10-step action plan'), 'Generate 10 steps CTA should be more protagonist for Pro users.');
+assert(!home.includes('{/* Pro member status */}'), 'Old appended Pro member status block should be removed or redesigned.');
+assert(!home.includes('Unlimited evaluations, benchmark, and history are active.'), 'Pro result copy should not feel like a passive status message appended to a free result.');
+assert(!home.includes('Generate 10 concrete next steps for this idea'), 'Old passive Pro next-step CTA copy should be replaced with a stronger action block.');
 assert(!home.includes('href={`/history?token=${encodeURIComponent(userSession.token)}`}'), 'Header should not show a standalone History link; Pro history belongs inside the dashboard.');
 assert(!home.includes('<a href="/history"'), 'History link without token is broken and should not render.');
 assert(!home.includes('handleClaimShareCredit'), 'Claiming +1 free evaluation should not be a separate share-modal action.');

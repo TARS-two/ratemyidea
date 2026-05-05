@@ -95,6 +95,9 @@ assert(home.includes('interface HistoryEvaluation'), 'Home should own the Pro hi
 assert(home.includes('fetchIdeaHistory') && home.includes('result_json'), 'Home should fetch saved Pro evaluations with full result_json for in-page history.');
 assert(home.includes('selectHistoryEvaluation'), 'Pro users should be able to restore a saved evaluation from the in-page history navigator.');
 assert(home.includes('id="pro-history"') && home.includes('Pro history'), 'Home should render a Pro history section after sign-in, before a new evaluation is required.');
+assert(home.includes('lg:sticky') && home.includes('lg:top-24'), 'Pro history should become a sticky desktop sidebar instead of stacking into the result flow.');
+assert(home.includes('scroll-mt-28') && home.includes('href="#pro-history"'), 'Pro history anchors should account for the fixed header scroll offset.');
+assert(home.includes('lg:grid-cols-[minmax(0,1fr)_20rem]'), 'Pro Home layout should reserve a desktop sidebar column for history.');
 assert(home.includes('onSuccess={handleAuthSuccess}') && home.includes('await refreshUserAndProfile()'), 'Signing in from a cookie-less Pro account should hydrate Pro status immediately.');
 assert(home.includes('cursor-pointer') && home.includes('Get Pro account'), 'Header Get Pro account CTA should show a pointer cursor on hover.');
 assert(!home.includes('Open dashboard'), 'Broken Open dashboard header CTA should be removed while history lives in the main evaluation view.');

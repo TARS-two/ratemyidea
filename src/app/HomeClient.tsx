@@ -828,7 +828,8 @@ export default function HomeClient() {
 
       {/* Hero + Form */}
       <main className="pt-28 pb-20 px-6">
-        <div className="mx-auto max-w-2xl">
+        <div className={`mx-auto ${isCurrentPro ? "max-w-6xl lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-6" : "max-w-2xl"}`}>
+          <div className="min-w-0">
           {/* Hero */}
           <div className="text-center mb-12">
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-tight">
@@ -929,60 +930,9 @@ export default function HomeClient() {
             </form>
           )}
 
-          {isCurrentPro && (
-            <section id="pro-history" className="mt-8 rounded-3xl border border-white/10 bg-[var(--surface)]/80 p-5 shadow-xl shadow-black/10">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-200">Pro history</p>
-                  <h2 className="mt-1 text-xl font-bold text-[var(--text-primary)]">
-                    {lang === "es" ? "Historial de ideas" : "Idea history"}
-                  </h2>
-                </div>
-                <span className="rounded-full bg-black/20 px-2.5 py-1 text-xs text-[var(--text-muted)]">
-                  {ideaHistory.length}
-                </span>
-              </div>
-
-              {ideaHistory.length === 0 ? (
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-5 text-center text-sm text-[var(--text-muted)]">
-                  {lang === "es" ? "Tus evaluaciones Pro aparecerán aquí después de correrlas." : "Your Pro evaluations will appear here after you run them."}
-                </div>
-              ) : (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {ideaHistory.map((item) => {
-                    const active = selectedHistoryId === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => selectHistoryEvaluation(item)}
-                        className={`rounded-2xl border p-4 text-left transition-all cursor-pointer ${active
-                          ? "border-[var(--electric)]/60 bg-[var(--electric)]/10"
-                          : "border-white/10 bg-black/20 hover:border-[var(--electric)]/30"}`}
-                      >
-                        <div className="mb-2 flex items-center justify-between gap-2">
-                          <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
-                            {item.idea_name || item.idea_text.slice(0, 56)}
-                          </span>
-                          <span className="text-sm font-bold text-amber-100">
-                            {(item.overall_score || 0).toFixed(1)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
-                          <span>{item.category || "Idea"}</span>
-                          <span>{new Date(item.created_at).toLocaleDateString(lang === "es" ? "es-MX" : "en-US", { month: "short", day: "numeric" })}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-          )}
-
           {/* Results */}
           {result && (
-            <div ref={resultRef} className="space-y-8 animate-fade-up">
+            <div ref={resultRef} className="scroll-mt-28 space-y-8 animate-fade-up">
               {isCurrentPro && (
                 <section
                   data-testid="pro-result-panel"
@@ -1338,6 +1288,58 @@ export default function HomeClient() {
                 </div>
               ))}
             </div>
+          )}
+          </div>
+
+          {isCurrentPro && (
+            <aside id="pro-history" className="scroll-mt-28 mt-8 rounded-3xl border border-white/10 bg-[var(--surface)]/80 p-5 shadow-xl shadow-black/10 lg:sticky lg:top-24 lg:mt-0 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-200">Pro history</p>
+                  <h2 className="mt-1 text-xl font-bold text-[var(--text-primary)]">
+                    {lang === "es" ? "Historial de ideas" : "Idea history"}
+                  </h2>
+                </div>
+                <span className="rounded-full bg-black/20 px-2.5 py-1 text-xs text-[var(--text-muted)]">
+                  {ideaHistory.length}
+                </span>
+              </div>
+
+              {ideaHistory.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-5 text-center text-sm text-[var(--text-muted)]">
+                  {lang === "es" ? "Tus evaluaciones Pro aparecerán aquí después de correrlas." : "Your Pro evaluations will appear here after you run them."}
+                </div>
+              ) : (
+                <div className="grid gap-2">
+                  {ideaHistory.map((item) => {
+                    const active = selectedHistoryId === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => selectHistoryEvaluation(item)}
+                        className={`rounded-2xl border p-4 text-left transition-all cursor-pointer ${active
+                          ? "border-[var(--electric)]/60 bg-[var(--electric)]/10"
+                          : "border-white/10 bg-black/20 hover:border-[var(--electric)]/30"}`}
+                      >
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                            {item.idea_name || item.idea_text.slice(0, 56)}
+                          </span>
+                          <span className="text-sm font-bold text-amber-100">
+                            {(item.overall_score || 0).toFixed(1)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
+                          <span>{item.category || "Idea"}</span>
+                          <span>{new Date(item.created_at).toLocaleDateString(lang === "es" ? "es-MX" : "en-US", { month: "short", day: "numeric" })}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </aside>
           )}
         </div>
       </main>

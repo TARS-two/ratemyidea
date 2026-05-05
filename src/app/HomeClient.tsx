@@ -739,9 +739,17 @@ export default function HomeClient() {
             {userSession ? (
               <div className="flex items-center gap-2">
                 {isCurrentPro && (
-                  <span className="inline-flex items-center rounded-full border border-amber-300/40 bg-gradient-to-r from-amber-300/25 to-yellow-500/15 px-3 py-1 text-xs font-bold text-amber-100 shadow-lg shadow-amber-300/20">
-                    ✨ Pro member
-                  </span>
+                  <>
+                    <a
+                      href={`/dashboard?token=${encodeURIComponent(userSession.token)}`}
+                      className="hidden rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-semibold text-[var(--text-secondary)] transition-all hover:border-[var(--electric)]/40 hover:text-[var(--text-primary)] sm:inline-flex"
+                    >
+                      Dashboard
+                    </a>
+                    <span className="inline-flex items-center rounded-full border border-amber-300/40 bg-gradient-to-r from-amber-300/25 to-yellow-500/15 px-3 py-1 text-xs font-bold text-amber-100 shadow-lg shadow-amber-300/20">
+                      ✨ Pro member
+                    </span>
+                  </>
                 )}
                 <button
                   onClick={handleSignOut}

@@ -10,6 +10,7 @@ const shareCreditRoute = readFileSync(new URL('../src/app/api/share-credit/route
 const strategicPlanRoute = readFileSync(new URL('../src/app/api/strategic-plan/route.ts', import.meta.url), 'utf8');
 const shareCardRoute = readFileSync(new URL('../src/app/api/share-card/route.tsx', import.meta.url), 'utf8');
 const historyPage = readFileSync(new URL('../src/app/history/page.tsx', import.meta.url), 'utf8');
+const dashboardPage = readFileSync(new URL('../src/app/dashboard/page.tsx', import.meta.url), 'utf8');
 
 assert(authModal.includes('emailRedirectTo'), 'Supabase signup should set emailRedirectTo so production confirmations do not go to localhost.');
 assert(authModal.includes('window.location.origin'), 'Supabase signup redirect should use the current deployed origin.');
@@ -87,6 +88,14 @@ assert(!home.includes('if (canClaimShareCredit && !userSession) {\n      setClai
 assert(home.includes('handleShareWithImage') && home.includes('handleDownloadImage'), 'Share image should have a download fallback when native file sharing is unavailable.');
 
 assert(historyPage.includes('user_subscriptions') && historyPage.includes('subscription?.plan !== "pro"'), 'History page should be gated to Pro subscribers server-side.');
+assert(dashboardPage.includes('Dashboard Pro') && dashboardPage.includes('user_subscriptions'), 'Dashboard Pro MVP should exist and be gated to Pro subscribers.');
+assert(dashboardPage.includes('left sidebar') || dashboardPage.includes('Pro ideas'), 'Dashboard should include a left sidebar with clickable history.');
+assert(dashboardPage.includes('selectedEvaluation'), 'Dashboard should render a central selected evaluation panel.');
+assert(dashboardPage.includes('✨ Pro member'), 'Dashboard should show the premium Pro badge.');
+assert(dashboardPage.includes('Benchmark chart'), 'Dashboard should include a benchmark chart section.');
+assert(dashboardPage.includes('5 next-step plans left this month'), 'Dashboard should show the monthly next-step plan counter copy.');
+assert(dashboardPage.includes('Generate 10 next steps') && dashboardPage.includes('New evaluation'), 'Dashboard should include Generate 10 next steps and New evaluation actions.');
+assert(home.includes('/dashboard?token=') && home.includes('Dashboard'), 'Pro header should link to Dashboard, not a standalone History page.');
 assert(strategicPlanRoute.includes('NEXT_STEPS_MODEL') && strategicPlanRoute.includes('max_tokens: 1000'), 'Next-step generation should use a configurable model and lower token cap than the old 30-day plan.');
 assert(strategicPlanRoute.includes('exactly 10 concrete next steps') && strategicPlanRoute.includes('exactamente 10 siguientes pasos'), 'Strategic plan endpoint should now generate 10 next steps, not a 30-day plan.');
 

@@ -67,6 +67,12 @@ assert(home.includes('Pro analysis unlocked'), 'Pro result panel should clearly 
 assert(home.includes('Benchmark included') && home.includes('10-step plan ready'), 'Pro result panel should summarize benchmark and next-step plan benefits.');
 assert(home.includes('Pro insight benchmark'), 'Benchmark should be framed as a Pro insight section.');
 assert(home.includes('Build the 10-step action plan'), 'Generate 10 steps CTA should be more protagonist for Pro users.');
+assert(home.includes('text-center') && home.includes('Benchmark included') && home.includes('10-step plan ready'), 'Pro result summary cards should center their text.');
+assert(home.includes('formatStrategicPlanSteps'), 'Generated 10-step plans should be parsed into structured cards instead of rendered as plain text.');
+assert(home.includes('cleanStepMarkdown'), 'Generated 10-step plan rendering should strip markdown artifacts like **Title:** before display.');
+assert(home.includes('Step ${step.number}') || home.includes('Paso ${step.number}'), 'Generated 10-step cards should label each step clearly.');
+assert(home.includes('10-step action plan') && home.includes('Pro only'), 'Completed 10 Next Steps section should repeat the Pro only badge treatment.');
+assert(strategicPlanRoute.includes('Do not use Markdown bold markers') && strategicPlanRoute.includes('No uses marcadores Markdown de negritas'), 'Next-step prompt should prevent broken bold marker output like **Title:**.');
 assert(!home.includes('{/* Pro member status */}'), 'Old appended Pro member status block should be removed or redesigned.');
 assert(!home.includes('Unlimited evaluations, benchmark, and history are active.'), 'Pro result copy should not feel like a passive status message appended to a free result.');
 assert(!home.includes('Generate 10 concrete next steps for this idea'), 'Old passive Pro next-step CTA copy should be replaced with a stronger action block.');

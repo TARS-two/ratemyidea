@@ -156,6 +156,34 @@ function CategoryBar({
   );
 }
 
+function cleanStepMarkdown(text: string) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/^[-•]\s*/, "")
+    .replace(/^\s*\d+[.)]\s*/, "")
+    .replace(/^([^:]{2,80}):\s*/, "$1 — ")
+    .trim();
+}
+
+function formatStrategicPlanSteps(plan: string) {
+  const normalized = plan.replace(/\r\n/g, "\n").trim();
+  const matches = Array.from(normalized.matchAll(/(?:^|\n)\s*(\d{1,2})[.)]\s+([\s\S]*?)(?=\n\s*\d{1,2}[.)]\s+|$)/g));
+
+  if (matches.length > 0) {
+    return matches.slice(0, 10).map((match, index) => ({
+      number: Number(match[1]) || index + 1,
+      text: cleanStepMarkdown(match[2]),
+    }));
+  }
+
+  return normalized
+    .split("\n")
+    .map(cleanStepMarkdown)
+    .filter(Boolean)
+    .slice(0, 10)
+    .map((text, index) => ({ number: index + 1, text }));
+}
+
 /* ---------- main page ---------- */
 export default function HomeClient() {
   const [lang, setLang] = useState<Lang>("en");
@@ -851,11 +879,11 @@ export default function HomeClient() {
                       </p>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs sm:min-w-64">
-                      <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                      <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-center">
                         <p className="font-semibold text-amber-100">Benchmark included</p>
                         <p className="mt-1 text-[var(--text-muted)]">{lang === "es" ? "Comparación activa" : "Comparison active"}</p>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                      <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-center">
                         <p className="font-semibold text-amber-100">10-step plan ready</p>
                         <p className="mt-1 text-[var(--text-muted)]">{lang === "es" ? "Créditos Pro" : "Pro credits"}</p>
                       </div>
@@ -999,14 +1027,38 @@ export default function HomeClient() {
 
               {/* Strategic Plan */}
               {strategicPlan ? (
-                <div className="bg-[var(--surface)] border border-white/10 rounded-2xl p-6">
-                  <h3 className="font-semibold text-[var(--electric-light)] mb-3">
-                    🧭 {lang === "es" ? "10 siguientes pasos" : "10 Next Steps"}
-                  </h3>
-                  <div className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap leading-relaxed">
-                    {strategicPlan}
+                <section className="rounded-3xl border border-amber-300/20 bg-[var(--surface)] p-5 shadow-xl shadow-black/10">
+                  <div className="mb-5 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-200">
+                        {lang === "es" ? "Plan de acción Pro" : "Pro action plan"}
+                      </p>
+                      <h3 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+                        🧭 {lang === "es" ? "10 siguientes pasos" : "10-step action plan"}
+                      </h3>
+                    </div>
+                    <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-xs font-semibold text-amber-100">
+                      {lang === "es" ? "Solo Pro" : "Pro only"}
+                    </span>
                   </div>
-                </div>
+                  <ol className="space-y-3">
+                    {formatStrategicPlanSteps(strategicPlan).map((step) => (
+                      <li
+                        key={`${step.number}-${step.text}`}
+                        className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                      >
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="rounded-full bg-[var(--electric)]/15 px-2.5 py-1 text-xs font-bold text-[var(--electric-light)]">
+                            {lang === "es" ? `Paso ${step.number}` : `Step ${step.number}`}
+                          </span>
+                        </div>
+                        <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                          {step.text}
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
               ) : isCurrentPro ? (
                 <div className="relative overflow-hidden rounded-3xl border border-[var(--electric)]/30 bg-gradient-to-br from-[var(--electric)]/20 via-[var(--surface)] to-amber-300/10 p-6 text-center shadow-xl shadow-[var(--electric)]/10">
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--electric-light)]">

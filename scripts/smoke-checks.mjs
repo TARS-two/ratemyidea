@@ -45,6 +45,10 @@ assert(home.includes('Get Pro for unlimited evaluations'), 'English final free-e
 assert(home.includes('Obtén Pro para evaluaciones ilimitadas'), 'Spanish final free-evaluation CTA copy should be explicit.');
 assert(home.includes('+1 free evaluation') && home.includes('+1 evaluación gratis'), 'Share CTA should communicate the +1 evaluation incentive in both languages.');
 assert(home.includes('handlePostShareCreditClaim'), 'Share image should automatically route eligible users into +1 claim after sharing.');
+assert(home.includes('PENDING_SHARE_CREDIT_KEY'), 'Share-credit claim intent should persist through email confirmation redirects.');
+assert(home.includes('localStorage.setItem(PENDING_SHARE_CREDIT_KEY'), 'Anonymous share-credit claim should be stored before opening signup.');
+assert(home.includes('claimPendingShareCredit'), 'Home boot should claim pending share credit after Supabase restores the confirmed email session.');
+assert(home.includes('localStorage.removeItem(PENDING_SHARE_CREDIT_KEY'), 'Pending share-credit intent should clear after successful claim/signout.');
 assert(!home.includes('Claim +1 free evaluation'), 'Share modal should not render a separate repetitive Claim +1 free evaluation button.');
 assert(shareCreditRoute.includes('granted: true') && shareCreditRoute.includes('granted: false'), 'Share-credit API should tell the UI whether a new credit was actually granted.');
 

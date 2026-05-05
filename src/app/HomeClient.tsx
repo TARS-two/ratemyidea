@@ -7,6 +7,7 @@ import BenchmarkChart from "@/components/BenchmarkChart";
 import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
+const PENDING_SHARE_CREDIT_KEY = "rmi_pending_share_credit_claim";
 
 /* ---------- types ---------- */
 interface Source {
@@ -288,6 +289,12 @@ export default function HomeClient() {
     return baseSession;
   }
 
+  async function claimPendingShareCredit(token: string) {
+    if (localStorage.getItem(PENDING_SHARE_CREDIT_KEY) !== "true") return;
+    const granted = await claimShareCredit(token);
+    if (granted) localStorage.removeItem(PENDING_SHARE_CREDIT_KEY);
+  }
+
   // Load lang + session from localStorage and Supabase on mount
   useEffect(() => {
     const savedLang = localStorage.getItem("lang");
@@ -295,6 +302,7 @@ export default function HomeClient() {
 
     async function boot() {
       const session = await refreshUserAndProfile();
+      if (session?.token) await claimPendingShareCredit(session.token);
       const params = new URLSearchParams(window.location.search);
       const checkoutSessionId = params.get("session_id");
 
@@ -353,15 +361,16 @@ export default function HomeClient() {
     setUserSession(session);
     localStorage.setItem("rmi_session", JSON.stringify(session));
     setShowAuthModal(false);
-    if (claimShareCreditAfterAuth) {
+    if (claimShareCreditAfterAuth || localStorage.getItem(PENDING_SHARE_CREDIT_KEY) === "true") {
       setClaimShareCreditAfterAuth(false);
-      void claimShareCredit(token);
+      void claimPendingShareCredit(token);
     }
   }
 
   function handleSignOut() {
     setUserSession(null);
     localStorage.removeItem("rmi_session");
+    localStorage.removeItem(PENDING_SHARE_CREDIT_KEY);
   }
 
   async function fetchBenchmark(score: number, category: string) {
@@ -572,6 +581,7 @@ export default function HomeClient() {
   async function handlePostShareCreditClaim() {
     if (!canClaimShareCredit) return;
     if (!userSession) {
+      localStorage.setItem(PENDING_SHARE_CREDIT_KEY, "true");
       setClaimShareCreditAfterAuth(true);
       setAuthModalMode("claim-credit");
       setShowShareModal(false);

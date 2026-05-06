@@ -56,7 +56,8 @@ assert(!home.includes('Claim +1 free evaluation'), 'Share modal should not rende
 assert(shareCreditRoute.includes('granted: true') && shareCreditRoute.includes('granted: false'), 'Share-credit API should tell the UI whether a new credit was actually granted.');
 
 assert(rateRoute.includes('sub?.status === "active" || sub?.status === "trialing"'), '/api/rate should treat active and trialing Pro subscriptions consistently with the client and Stripe confirm flow.');
-assert(rateRoute.includes('countColumn = userId ? "user_id" : "ip_hash"'), '/api/rate should rate-limit logged-in free users by user_id, not only by shared IP.');
+assert(!rateRoute.includes('countColumn = userId ? "user_id" : "ip_hash"'), '/api/rate must not reset free limits by switching from anonymous IP counting to authenticated user_id-only counting after signup.');
+assert(rateRoute.includes('user_id.eq.${userId},ip_hash.eq.${ipHash}') && rateRoute.includes('usageRows?.length'), '/api/rate should combine same-day authenticated user_id usage with same-IP anonymous usage so signup does not grant a second free quota.');
 assert(rateRoute.includes('consume_extra_credit'), '/api/rate should consume extra share credits through the atomic Supabase RPC before allowing an over-limit evaluation.');
 assert(rateRoute.includes('extraCreditConsumed'), '/api/rate should track whether the current evaluation used an extra credit for accurate response metadata.');
 assert(rateRoute.includes('Promise.race') && rateRoute.includes('ANTHROPIC_TIMEOUT_MS'), '/api/rate should bound Anthropic calls with a timeout to control cost and stuck requests.');

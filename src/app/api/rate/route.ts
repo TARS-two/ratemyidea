@@ -151,15 +151,24 @@ export async function POST(request: NextRequest) {
       const today = new Date();
       today.setUTCHours(0, 0, 0, 0);
 
-      const countColumn = userId ? "user_id" : "ip_hash";
-      const countValue = userId ?? ipHash;
-      const { count } = await supabase
+      const usageQuery = supabase
         .from("evaluations")
-        .select("*", { count: "exact", head: true })
-        .eq(countColumn, countValue)
+        .select("id")
         .gte("created_at", today.toISOString());
 
-      const usedCount = count ?? 0;
+      const { data: usageRows, error: usageError } = userId
+        ? await usageQuery.or(`user_id.eq.${userId},ip_hash.eq.${ipHash}`)
+        : await usageQuery.eq("ip_hash", ipHash);
+
+      if (usageError) {
+        console.error("Rate limit usage lookup error:", usageError.message);
+        return NextResponse.json(
+          { error: "Rate limit service unavailable." },
+          { status: 503 }
+        );
+      }
+
+      const usedCount = usageRows?.length ?? 0;
       freeEvaluationsUsed = Math.min(usedCount, FREE_LIMIT);
       freeEvaluationsLeft = Math.max(FREE_LIMIT - usedCount, 0);
 

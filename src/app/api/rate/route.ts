@@ -114,6 +114,10 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createServiceClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Rate limit service unavailable." }, { status: 503 });
+    }
+
     const ip = getClientIP(request);
     const ipHash = hashIP(ip);
     let userId: string | null = null;
@@ -283,24 +287,27 @@ export async function POST(request: NextRequest) {
     parsed.freeEvaluationsLeft = freeEvaluationsLeft;
     parsed.extraCreditConsumed = extraCreditConsumed;
 
-    // Save to DB (non-blocking)
-    if (supabase) {
-      supabase
-        .from("evaluations")
-        .insert({
-          user_id: userId,
-          ip_hash: ipHash,
-          idea_text: idea.trim(),
-          idea_name: parsed.ideaName,
-          overall_score: parsed.overall,
-          category,
-          lang: lang || "en",
-          badge: badge.label,
-          result_json: parsed,
-        })
-        .then(({ error }) => {
-          if (error) console.error("DB save error:", error.message);
-        });
+    // Save to DB before returning so free-limit counts and CTA metadata advance reliably.
+    const { error: saveError } = await supabase
+      .from("evaluations")
+      .insert({
+        user_id: userId,
+        ip_hash: ipHash,
+        idea_text: idea.trim(),
+        idea_name: parsed.ideaName,
+        overall_score: parsed.overall,
+        category,
+        lang: lang || "en",
+        badge: badge.label,
+        result_json: parsed,
+      });
+
+    if (saveError) {
+      console.error("DB save error:", saveError.message);
+      return NextResponse.json(
+        { error: "Could not save evaluation. Please try again." },
+        { status: 503 }
+      );
     }
 
     // Subscribe email to Beehiiv

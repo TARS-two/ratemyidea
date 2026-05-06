@@ -61,6 +61,15 @@ assert(rateRoute.includes('consume_extra_credit'), '/api/rate should consume ext
 assert(rateRoute.includes('extraCreditConsumed'), '/api/rate should track whether the current evaluation used an extra credit for accurate response metadata.');
 assert(rateRoute.includes('Promise.race') && rateRoute.includes('ANTHROPIC_TIMEOUT_MS'), '/api/rate should bound Anthropic calls with a timeout to control cost and stuck requests.');
 assert(rateSearch.includes('AbortController') && rateSearch.includes('SERPER_TIMEOUT_MS'), 'Serper search should have a request timeout so research failures do not hang evaluations.');
+assert(rateRoute.includes('const { error: saveError } = await supabase') && !rateRoute.includes('.then(({ error })'), '/api/rate must await evaluation persistence before returning so anonymous daily limits and CTA metadata advance reliably.');
+
+const signOutMatch = home.match(/(?:async )?function handleSignOut\(\) \{([\s\S]*?)\n  \}/);
+assert(signOutMatch, 'Home should define handleSignOut.');
+const signOutBody = signOutMatch?.[1] ?? '';
+assert(signOutBody.includes('await supabase?.auth.signOut()'), 'Sign out should clear the real Supabase session so reload does not auto-sign back in.');
+assert(signOutBody.includes('setUserProfile(null)') && signOutBody.includes('setEvaluationMeta(null)'), 'Sign out should clear profile and evaluation metadata so Pro entitlement cannot linger in UI state.');
+assert(signOutBody.includes('setBenchmark(null)') && signOutBody.includes('setStrategicPlan(null)') && signOutBody.includes('setIdeaHistory([])'), 'Sign out should clear Pro-only benchmark, action plan, and history state immediately.');
+assert(signOutBody.includes('setResult(null)') && signOutBody.includes('setSelectedHistoryId(null)'), 'Sign out should clear selected Pro evaluation/result so historical Pro data is not visible after logout.');
 
 assert(authModal.includes('Create a free account to claim your extra evaluation'), 'Auth modal should explain login/signup is required to claim +1 free evaluation.');
 assert(authModal.includes('Crea una cuenta gratis para reclamar tu evaluación extra'), 'Auth modal should explain the +1 claim in Spanish.');

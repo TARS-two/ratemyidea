@@ -383,8 +383,18 @@ export default function HomeClient() {
     }
   }
 
-  function handleSignOut() {
+  async function handleSignOut() {
+    await supabase?.auth.signOut();
     setUserSession(null);
+    setUserProfile(null);
+    setEvaluationMeta(null);
+    setBenchmark(null);
+    setStrategicPlan(null);
+    setIdeaHistory([]);
+    setSelectedHistoryId(null);
+    setResult(null);
+    setShareCreditClaimed(false);
+    setClaimShareCreditAfterAuth(false);
     localStorage.removeItem("rmi_session");
     localStorage.removeItem(PENDING_SHARE_CREDIT_KEY);
   }

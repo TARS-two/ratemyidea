@@ -8,6 +8,35 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const BEEHIIV_API_KEY = process.env.BEEHIIV_API_KEY;
 const BEEHIIV_PUBLICATION_ID = process.env.BEEHIIV_PUBLICATION_ID;
 const FREE_LIMIT = 2; // Reverted to 2 - TARS 2026-04-29
+const ANTHROPIC_TIMEOUT_MS = 25000;
+
+type AnthropicMessageResponse = {
+  content?: Array<{ text?: string }>;
+};
+
+async function fetchAnthropicWithTimeout(body: unknown): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ANTHROPIC_TIMEOUT_MS);
+  try {
+    return await Promise.race([
+      fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": ANTHROPIC_API_KEY!,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify(body),
+      }),
+      new Promise<Response>((_, reject) =>
+        setTimeout(() => reject(new Error("Anthropic request timed out.")), ANTHROPIC_TIMEOUT_MS)
+      ),
+    ]);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 const SYSTEM_PROMPT = `You are a senior business analyst and startup advisor. You rate business ideas on a scale of 1-10 with detailed, honest, actionable feedback.
 
@@ -91,6 +120,7 @@ export async function POST(request: NextRequest) {
     let isPro = false;
     let freeEvaluationsUsed = 0;
     let freeEvaluationsLeft = FREE_LIMIT;
+    let extraCreditConsumed = false;
 
     // Check auth + subscription if Supabase is available
     if (supabase && authToken) {
@@ -103,7 +133,7 @@ export async function POST(request: NextRequest) {
             .select("plan, status, extra_credits")
             .eq("user_id", user.id)
             .single();
-          if (sub?.plan === "pro" && sub?.status === "active") {
+          if (sub?.plan === "pro" && (sub?.status === "active" || sub?.status === "trialing")) {
             isPro = true;
           }
         }
@@ -117,10 +147,12 @@ export async function POST(request: NextRequest) {
       const today = new Date();
       today.setUTCHours(0, 0, 0, 0);
 
+      const countColumn = userId ? "user_id" : "ip_hash";
+      const countValue = userId ?? ipHash;
       const { count } = await supabase
         .from("evaluations")
         .select("*", { count: "exact", head: true })
-        .eq("ip_hash", ipHash)
+        .eq(countColumn, countValue)
         .gte("created_at", today.toISOString());
 
       const usedCount = count ?? 0;
@@ -128,32 +160,38 @@ export async function POST(request: NextRequest) {
       freeEvaluationsLeft = Math.max(FREE_LIMIT - usedCount, 0);
 
       if (usedCount >= FREE_LIMIT) {
-        // Check extra credits
-        if (userId) {
-          const { data: sub } = await supabase
+        if (!userId) {
+          return NextResponse.json(
+            {
+              error: "limit_reached",
+              message:
+                "You have used your 2 free evaluations today. Sign in or upgrade to Pro to continue.",
+            },
+            { status: 429 }
+          );
+        }
+
+        const { data: consumed, error: consumeError } = await supabase.rpc("consume_extra_credit", {
+          target_user_id: userId,
+        });
+
+        if (consumeError) {
+          console.error("Extra credit consume error:", consumeError.message);
+          return NextResponse.json(
+            { error: "Extra credit system unavailable. Please try again later." },
+            { status: 503 }
+          );
+        }
+
+        if (consumed === true) {
+          extraCreditConsumed = true;
+          freeEvaluationsUsed = FREE_LIMIT;
+          const { data: updatedSub } = await supabase
             .from("user_subscriptions")
             .select("extra_credits")
             .eq("user_id", userId)
             .single();
-
-          if (sub && sub.extra_credits > 0) {
-            const remainingExtraCredits = sub.extra_credits - 1;
-            await supabase
-              .from("user_subscriptions")
-              .update({ extra_credits: remainingExtraCredits })
-              .eq("user_id", userId);
-            freeEvaluationsUsed = FREE_LIMIT;
-            freeEvaluationsLeft = remainingExtraCredits;
-          } else {
-            return NextResponse.json(
-              {
-                error: "limit_reached",
-                message:
-                  "You have used your 2 free evaluations today. Sign in or upgrade to Pro to continue.",
-              },
-              { status: 429 }
-            );
-          }
+          freeEvaluationsLeft = updatedSub?.extra_credits ?? 0;
         } else {
           return NextResponse.json(
             {
@@ -191,24 +229,16 @@ export async function POST(request: NextRequest) {
     const sources = formatSourcesForClient(uniqueResults);
 
     // Step 2: Call Claude
-    const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1500,
-        system: SYSTEM_PROMPT,
-        messages: [
-          {
-            role: "user",
-            content: `${lang === "es" ? "[Respond in Spanish]\n\n" : "[Respond in English]\n\n"}Rate this business idea:\n\n${idea.trim()}${searchContext}`,
-          },
-        ],
-      }),
+    const aiRes = await fetchAnthropicWithTimeout({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1500,
+      system: SYSTEM_PROMPT,
+      messages: [
+        {
+          role: "user",
+          content: `${lang === "es" ? "[Respond in Spanish]\n\n" : "[Respond in English]\n\n"}Rate this business idea:\n\n${idea.trim()}${searchContext}`,
+        },
+      ],
     });
 
     if (!aiRes.ok) {
@@ -251,6 +281,7 @@ export async function POST(request: NextRequest) {
     parsed.isPro = isPro;
     parsed.freeEvaluationsUsed = freeEvaluationsUsed;
     parsed.freeEvaluationsLeft = freeEvaluationsLeft;
+    parsed.extraCreditConsumed = extraCreditConsumed;
 
     // Save to DB (non-blocking)
     if (supabase) {

@@ -7,6 +7,8 @@ const subscribeRoute = readFileSync(new URL('../src/app/api/stripe/subscribe/rou
 const webhookRoute = readFileSync(new URL('../src/app/api/stripe/webhook/route.ts', import.meta.url), 'utf8');
 const confirmRoute = readFileSync(new URL('../src/app/api/stripe/confirm/route.ts', import.meta.url), 'utf8');
 const shareCreditRoute = readFileSync(new URL('../src/app/api/share-credit/route.ts', import.meta.url), 'utf8');
+const rateRoute = readFileSync(new URL('../src/app/api/rate/route.ts', import.meta.url), 'utf8');
+const rateSearch = readFileSync(new URL('../src/app/api/rate/search.ts', import.meta.url), 'utf8');
 const strategicPlanRoute = readFileSync(new URL('../src/app/api/strategic-plan/route.ts', import.meta.url), 'utf8');
 const shareCardRoute = readFileSync(new URL('../src/app/api/share-card/route.tsx', import.meta.url), 'utf8');
 const historyPage = readFileSync(new URL('../src/app/history/page.tsx', import.meta.url), 'utf8');
@@ -52,6 +54,13 @@ assert(home.includes('claimPendingShareCredit'), 'Home boot should claim pending
 assert(home.includes('localStorage.removeItem(PENDING_SHARE_CREDIT_KEY'), 'Pending share-credit intent should clear after successful claim/signout.');
 assert(!home.includes('Claim +1 free evaluation'), 'Share modal should not render a separate repetitive Claim +1 free evaluation button.');
 assert(shareCreditRoute.includes('granted: true') && shareCreditRoute.includes('granted: false'), 'Share-credit API should tell the UI whether a new credit was actually granted.');
+
+assert(rateRoute.includes('sub?.status === "active" || sub?.status === "trialing"'), '/api/rate should treat active and trialing Pro subscriptions consistently with the client and Stripe confirm flow.');
+assert(rateRoute.includes('countColumn = userId ? "user_id" : "ip_hash"'), '/api/rate should rate-limit logged-in free users by user_id, not only by shared IP.');
+assert(rateRoute.includes('consume_extra_credit'), '/api/rate should consume extra share credits through the atomic Supabase RPC before allowing an over-limit evaluation.');
+assert(rateRoute.includes('extraCreditConsumed'), '/api/rate should track whether the current evaluation used an extra credit for accurate response metadata.');
+assert(rateRoute.includes('Promise.race') && rateRoute.includes('ANTHROPIC_TIMEOUT_MS'), '/api/rate should bound Anthropic calls with a timeout to control cost and stuck requests.');
+assert(rateSearch.includes('AbortController') && rateSearch.includes('SERPER_TIMEOUT_MS'), 'Serper search should have a request timeout so research failures do not hang evaluations.');
 
 assert(authModal.includes('Create a free account to claim your extra evaluation'), 'Auth modal should explain login/signup is required to claim +1 free evaluation.');
 assert(authModal.includes('Crea una cuenta gratis para reclamar tu evaluación extra'), 'Auth modal should explain the +1 claim in Spanish.');

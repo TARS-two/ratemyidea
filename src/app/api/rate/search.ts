@@ -52,6 +52,7 @@ function isDomainTrusted(url: string): boolean {
 }
 
 const SERPER_API_KEY = process.env.SERPER_API_KEY;
+const SERPER_TIMEOUT_MS = 8000;
 
 export async function searchWeb(query: string, maxResults: number = 8): Promise<SearchResult[]> {
   if (!SERPER_API_KEY) {
@@ -59,9 +60,13 @@ export async function searchWeb(query: string, maxResults: number = 8): Promise<
     return [];
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SERPER_TIMEOUT_MS);
+
   try {
     const res = await fetch("https://google.serper.dev/search", {
       method: "POST",
+      signal: controller.signal,
       headers: {
         "X-API-KEY": SERPER_API_KEY,
         "Content-Type": "application/json",
@@ -87,8 +92,14 @@ export async function searchWeb(query: string, maxResults: number = 8): Promise<
       domain: extractDomain(r.link || ""),
     }));
   } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      console.error("Search timeout:", query);
+      return [];
+    }
     console.error("Search error:", err);
     return [];
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

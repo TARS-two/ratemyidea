@@ -79,6 +79,21 @@ interface HistoryEvaluation {
   result_json: ScoreResult | null;
 }
 
+function getErrorMessage(value: unknown, fallback: string): string {
+  if (typeof value === "string" && value.trim()) return value;
+  if (value instanceof Error && value.message.trim()) return value.message;
+
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const nested = record.message ?? record.error ?? record.detail ?? record.description;
+    if (nested !== value) {
+      return getErrorMessage(nested, fallback);
+    }
+  }
+
+  return fallback;
+}
+
 /* ---------- score ring ---------- */
 function ScoreRing({ score }: { score: number }) {
   const circumference = 2 * Math.PI * 45;
@@ -497,14 +512,14 @@ export default function HomeClient() {
           setAuthModalMode("limit");
           setShowAuthModal(true);
         } else {
-          setError(errData.message || "Too many requests. Try again later.");
+          setError(getErrorMessage(errData.message ?? errData.error, "Too many requests. Try again later."));
         }
         return;
       }
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || "Something went wrong. Try again.");
+        throw new Error(getErrorMessage(errData.error ?? errData.message, "Something went wrong. Try again."));
       }
 
       const data = await res.json();
@@ -537,7 +552,7 @@ export default function HomeClient() {
         resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 200);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(getErrorMessage(err, "Something went wrong."));
     } finally {
       setLoading(false);
     }

@@ -119,6 +119,8 @@ assert(home.includes('scroll-mt-28') && home.includes('href="#pro-history"'), 'P
 assert(home.includes('lg:grid-cols-[minmax(0,1fr)_20rem]'), 'Pro Home layout should reserve a desktop sidebar column for history.');
 assert(home.includes('onSuccess={handleAuthSuccess}') && home.includes('await refreshUserAndProfile()'), 'Signing in from a cookie-less Pro account should hydrate Pro status immediately.');
 assert(home.includes('cursor-pointer') && home.includes('Get Pro account'), 'Header Get Pro account CTA should show a pointer cursor on hover.');
+assert(home.includes('getErrorMessage'), 'Home should normalize API/client errors before rendering them to users.');
+assert(home.includes('Something went wrong. Try again.') && !home.includes('throw new Error(errData.error || "Something went wrong. Try again.")'), 'Home should not throw raw API error objects that render as [object Object].');
 assert(!home.includes('Open dashboard'), 'Broken Open dashboard header CTA should be removed while history lives in the main evaluation view.');
 assert(!home.includes('Review this in Dashboard'), 'Pro result should not link to the unstable Dashboard route.');
 assert(strategicPlanRoute.includes('NEXT_STEPS_MODEL') && strategicPlanRoute.includes('max_tokens: 1000'), 'Next-step generation should use a configurable model and lower token cap than the old 30-day plan.');

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 const home = readFileSync(new URL('../src/app/HomeClient.tsx', import.meta.url), 'utf8');
 const authModal = readFileSync(new URL('../src/components/AuthModal.tsx', import.meta.url), 'utf8');
+const marketStudyPreview = readFileSync(new URL('../src/components/MarketStudyPreview.tsx', import.meta.url), 'utf8');
 const subscribeRoute = readFileSync(new URL('../src/app/api/stripe/subscribe/route.ts', import.meta.url), 'utf8');
 const webhookRoute = readFileSync(new URL('../src/app/api/stripe/webhook/route.ts', import.meta.url), 'utf8');
 const confirmRoute = readFileSync(new URL('../src/app/api/stripe/confirm/route.ts', import.meta.url), 'utf8');
@@ -23,9 +24,11 @@ assert(home.includes('We don’t sell, publish, or use your ideas to build compe
 assert(home.includes('detectIdeaLanguage') && home.includes('setLang(detectedIdeaLang)'), 'Home should auto-select Spanish/English from the prompt before submitting so result language follows the idea, not just the UI.');
 assert(home.includes('navigator.language') && home.includes('localStorage.getItem("lang")'), 'Home should auto-detect browser Spanish while preserving saved language preference.');
 assert(rateRoute.includes('detectIdeaLanguage') && rateRoute.includes('const responseLang = lang === "es" || lang === "en" ? lang : detectIdeaLanguage(idea)'), '/api/rate should fall back to prompt-language detection when client language is missing or stale.');
-assert(home.includes('showMarketStudyPreview') && home.includes('Continue to checkout — $49') && home.includes('Continuar al pago — $49'), 'Market Study CTA should open an explanatory preview before Stripe checkout.');
-assert(home.includes('max-h-[85vh]') && home.includes('overflow-y-auto') && home.includes('blur-sm'), 'Market Study preview should be an internal scrollable document-style preview with blurred locked sections.');
-assert(home.includes('generic preview very close to the final product') && home.includes('se genera después de la compra'), 'Market Study preview should clarify it is a generic close preview and the real report is generated after purchase.');
+assert(home.includes('showMarketStudyPreview') && home.includes('MarketStudyPreview') && home.includes('onCheckout={startMarketStudyCheckout}'), 'Market Study CTA should open a reusable explanatory preview before Stripe checkout.');
+assert(marketStudyPreview.includes('Complete Market Study') && marketStudyPreview.includes('Executive Summary') && marketStudyPreview.includes('Market Analysis') && marketStudyPreview.includes('Competitor Analysis'), 'Market Study preview should mirror the real study/PDF section structure.');
+assert(marketStudyPreview.includes('max-h-[82vh]') && marketStudyPreview.includes('overflow-y-auto') && marketStudyPreview.includes('blur-[3px]'), 'Market Study preview should be an internal scrollable PDF-style preview with blurred locked sections.');
+assert(marketStudyPreview.includes('basada en la plantilla real del PDF') && marketStudyPreview.includes('generic preview based on the real PDF template'), 'Market Study preview should clarify it is a generic preview based on the real PDF template and the real report is generated after purchase.');
+assert(marketStudyPreview.includes('🛒') && marketStudyPreview.includes('Comprar Market Study') && marketStudyPreview.includes('Secure payment processed by Stripe') && marketStudyPreview.includes('$49 USD'), 'Market Study checkout CTA should feel professional: cart icon, product-focused copy, secure payment note, and price separated as metadata.');
 assert(home.includes('Privacy') && home.includes('Terms') && home.includes('mailto:tars@ai-norte.com'), 'Footer should link to privacy, terms, and contact without adding an About section to ratemyidea.');
 assert(home.includes('href="/"') && home.includes('aria-label="Go to Rate My Idea home"'), 'Header Rate My Idea logo should link back to the home/start state.');
 assert(privacyPage.includes('We do not sell your ideas') && privacyPage.includes('No vendemos tus ideas'), 'Privacy page should include the agreed idea-protection promise in EN and ES.');

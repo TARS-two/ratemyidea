@@ -4,6 +4,7 @@ import { useState, useEffect, FormEvent, useRef } from "react";
 import { Lang, t } from "./i18n";
 import AuthModal from "@/components/AuthModal";
 import BenchmarkChart from "@/components/BenchmarkChart";
+import MarketStudyPreview from "@/components/MarketStudyPreview";
 import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
@@ -1461,110 +1462,13 @@ export default function HomeClient() {
 
       {/* Market Study Preview Modal */}
       {showMarketStudyPreview && result && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowMarketStudyPreview(false); }}
-        >
-          <div className="w-full max-w-3xl overflow-hidden rounded-3xl border border-[var(--electric)]/30 bg-[var(--surface)] shadow-2xl shadow-[var(--electric)]/10 animate-fade-up">
-            <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--electric-light)]">
-                  {lang === "es" ? "Preview antes de pagar" : "Preview before checkout"}
-                </p>
-                <h3 className="mt-2 text-2xl font-bold text-[var(--text-primary)]">
-                  {lang === "es" ? "Market Study — ejemplo del archivo" : "Market Study — sample file preview"}
-                </h3>
-                <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                  {lang === "es" ? "Revisa títulos, estructura y tipo de análisis. El texto y gráficos específicos se muestran borrosos hasta completar la compra." : "Review the titles, structure, and kind of analysis. Specific text and charts stay blurred until purchase is complete."}
-                </p>
-              </div>
-              <button onClick={() => setShowMarketStudyPreview(false)} className="text-xl leading-none text-[var(--text-muted)] transition-colors hover:text-white cursor-pointer">✕</button>
-            </div>
-
-            <div className="max-h-[85vh] overflow-y-auto px-6 py-5">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-inner shadow-black/20">
-                <div className="mb-5 flex items-start justify-between gap-4 border-b border-white/10 pb-4">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Rate My Idea Market Study</p>
-                    <h4 className="mt-2 text-xl font-bold text-white">{result.ideaName}</h4>
-                  </div>
-                  <div className="rounded-xl bg-[var(--electric)]/15 px-3 py-2 text-sm font-semibold text-[var(--electric-light)]">
-                    {result.overall.toFixed(1)}/10
-                  </div>
-                </div>
-
-                <div className="space-y-5 text-sm">
-                  <section>
-                    <h5 className="mb-2 font-bold text-white">1. {lang === "es" ? "Resumen ejecutivo" : "Executive summary"}</h5>
-                    <p className="text-[var(--text-secondary)]">
-                      {lang === "es" ? "Señal inicial basada en tu evaluación: " : "Initial signal based on your evaluation: "}
-                      {result.summary}
-                    </p>
-                  </section>
-
-                  <section>
-                    <h5 className="mb-2 font-bold text-white">2. {lang === "es" ? "Panorama del mercado" : "Market overview"}</h5>
-                    <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/25 p-4">
-                      <div className="blur-sm select-none space-y-2">
-                        <p className="text-[var(--text-muted)]">TAM / SAM / SOM estimate with source notes and adoption timing.</p>
-                        <div className="h-24 rounded-lg bg-gradient-to-r from-[var(--electric)]/45 via-cyan-300/25 to-emerald-300/30" />
-                        <p className="text-[var(--text-muted)]">•••••• ••••• ••••••• ••••• ••••••••• ••••• ••••• •••••••••</p>
-                      </div>
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/35 text-xs font-bold text-white">
-                        {lang === "es" ? "Datos específicos desbloqueados después de la compra" : "Specific data unlocked after purchase"}
-                      </div>
-                    </div>
-                  </section>
-
-                  <section>
-                    <h5 className="mb-2 font-bold text-white">3. {lang === "es" ? "Cliente objetivo y caso de uso" : "Target customer and use case"}</h5>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-xl bg-[var(--surface-light)] p-3">
-                        <p className="font-semibold text-white">{lang === "es" ? "Segmento primario" : "Primary segment"}</p>
-                        <p className="mt-1 blur-sm select-none text-[var(--text-muted)]">B2B teams with urgent workflow pain and clear budget owner.</p>
-                      </div>
-                      <div className="rounded-xl bg-[var(--surface-light)] p-3">
-                        <p className="font-semibold text-white">{lang === "es" ? "Disparador de compra" : "Purchase trigger"}</p>
-                        <p className="mt-1 blur-sm select-none text-[var(--text-muted)]">Manual process cost exceeds estimated subscription price.</p>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section>
-                    <h5 className="mb-2 font-bold text-white">4. {lang === "es" ? "Competidores y posicionamiento" : "Competitors and positioning"}</h5>
-                    <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/25 p-4">
-                      <div className="blur-sm select-none space-y-2 text-[var(--text-muted)]">
-                        <p>Competitor A — broad platform, high switching cost.</p>
-                        <p>Competitor B — cheaper point solution, weaker automation.</p>
-                        <p>White-space: faster onboarding + narrower vertical workflow.</p>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section>
-                    <h5 className="mb-2 font-bold text-white">5. {lang === "es" ? "Precio, riesgos y recomendación" : "Pricing, risks, and recommendation"}</h5>
-                    <div className="space-y-2 rounded-xl bg-[var(--surface-light)] p-4">
-                      <p className="text-[var(--text-secondary)]">{lang === "es" ? "Riesgo principal detectado: " : "Main detected risk: "}{result.risks[0] || (lang === "es" ? "Validar demanda real." : "Validate real demand.")}</p>
-                      <p className="blur-sm select-none text-[var(--text-muted)]">Go/no-go recommendation, pricing test, 7-day validation script, and first outreach list.</p>
-                    </div>
-                  </section>
-                </div>
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 text-xs text-amber-100">
-                {lang === "es" ? "Nota: este preview muestra un archivo genérico muy cercano al producto final; el Market Study real se genera después de la compra con base en tu idea y la investigación disponible. Es una herramienta de apoyo para decidir, no asesoría legal, financiera ni de inversión, y no garantiza rentabilidad, demanda o éxito comercial." : "Note: this is a generic preview very close to the final product; the real Market Study is generated after purchase based on your idea and available research. It is a decision-support tool, not financial, legal, investment, or professional advice, and it does not guarantee profitability, demand, or business success."}
-              </div>
-
-              <button
-                onClick={startMarketStudyCheckout}
-                disabled={marketStudyCheckoutLoading}
-                className="mt-5 w-full rounded-xl bg-[var(--electric)] px-6 py-4 text-base font-semibold text-white transition-all hover:bg-[var(--electric-dark)] disabled:opacity-60 cursor-pointer glow-pulse"
-              >
-                {marketStudyCheckoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "Continuar al pago — $49" : "Continue to checkout — $49")}
-              </button>
-            </div>
-          </div>
-        </div>
+        <MarketStudyPreview
+          lang={lang}
+          result={result}
+          loading={marketStudyCheckoutLoading}
+          onClose={() => setShowMarketStudyPreview(false)}
+          onCheckout={startMarketStudyCheckout}
+        />
       )}
 
       {/* Share Modal */}

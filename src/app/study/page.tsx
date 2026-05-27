@@ -206,28 +206,70 @@ function StudyContent() {
     <main className="min-h-screen grid-bg">
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[var(--midnight)]/80 backdrop-blur-xl border-b border-white/5 print:hidden">
         <div className="mx-auto max-w-4xl flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span className="text-xl">🧠</span>
-            <span className="font-bold text-lg tracking-tight">Rate My Idea</span>
+            <div>
+              <span className="block font-bold text-lg tracking-tight leading-none">Rate My Idea</span>
+              <span className="text-[10px] uppercase tracking-[0.24em] text-[var(--electric-light)]">AI Norte</span>
+            </div>
           </div>
-          <a href="/" className="text-sm text-[var(--text-muted)] hover:text-[var(--electric-light)] transition-colors">
-            ← Rate another idea
-          </a>
+          <div className="flex items-center gap-4">
+            <button onClick={() => window.print()} className="hidden rounded-full border border-[var(--electric)]/30 px-4 py-2 text-xs font-semibold text-[var(--electric-light)] transition-colors hover:bg-[var(--electric)]/10 sm:inline-flex">
+              📄 Download PDF
+            </button>
+            <a href="/" className="text-sm text-[var(--text-muted)] hover:text-[var(--electric-light)] transition-colors">
+              ← Rate another idea
+            </a>
+          </div>
         </div>
       </nav>
 
       <div className="pt-24 pb-20 px-4 md:px-6 max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center mb-8">
+        {/* Cover / consulting brief header */}
+        <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-[var(--surface)] via-[var(--surface)] to-[var(--electric)]/15 p-8 text-center shadow-2xl shadow-black/20 print:shadow-none">
+          <div className="mb-8 flex items-center justify-center gap-3 text-xs font-bold uppercase tracking-[0.24em] text-[var(--electric-light)]">
+            <span>AI Norte</span>
+            <span className="text-white/20">/</span>
+            <span>Systems over motivation</span>
+          </div>
           <p className="text-sm text-[var(--electric-light)] uppercase tracking-wider mb-2">Complete Market Study</p>
-          <h1 className="text-3xl md:text-4xl font-bold">{study.ideaName}</h1>
-          <div className="mt-3 flex items-center justify-center gap-3">
-            <span className="text-4xl font-bold" style={{
+          <h1 className="text-3xl md:text-5xl font-bold text-white">{study.ideaName}</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-sm text-[var(--text-secondary)]">
+            Prepared as a lightweight consulting report for early go/no-go decision-making. Generated with AI research support and structured for PDF delivery.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <span className="text-5xl font-bold" style={{
               color: study.verdict.score >= 7.5 ? "var(--accent-green)" : study.verdict.score >= 5 ? "var(--accent-yellow)" : "var(--accent-red)"
             }}>
               {study.verdict.score.toFixed(1)}/10
             </span>
             <Badge text={study.verdict.recommendation.toUpperCase()} color={recColor} />
+          </div>
+          <div className="mt-8 grid gap-3 text-left sm:grid-cols-3">
+            {[
+              { label: "Market", value: study.marketAnalysis.tam },
+              { label: "Primary persona", value: study.targetAudience.primaryPersona.name },
+              { label: "Breakeven", value: study.financialProjections.breakeven },
+            ].map((item) => (
+              <div key={item.label} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--electric-light)]">{item.label}</p>
+                <p className="mt-2 line-clamp-3 text-sm text-[var(--text-secondary)]">{item.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-[var(--surface)] p-5 print:hidden">
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-[var(--electric-light)]">Report map</p>
+          <div className="grid gap-2 text-sm text-[var(--text-secondary)] sm:grid-cols-2">
+            {[
+              "Executive Summary", "Market Analysis", "Competitor Analysis", "Target Audience", "Go-to-Market Strategy", "Financial Projections", "Risk Assessment", "Final Verdict",
+            ].map((item, index) => (
+              <div key={item} className="flex items-center gap-3 rounded-xl bg-black/20 px-3 py-2">
+                <span className="text-xs font-mono text-[var(--electric-light)]">{String(index + 1).padStart(2, "0")}</span>
+                <span>{item}</span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -435,6 +477,13 @@ function StudyContent() {
             </div>
           </Section>
         )}
+
+        {/* Actions */}
+        <div className="rounded-2xl border border-white/10 bg-[var(--surface)] p-5 text-center text-xs uppercase tracking-[0.22em] text-[var(--text-muted)]">
+          <span className="font-bold text-[var(--electric-light)]">AI Norte</span>
+          <span className="mx-2 text-white/20">/</span>
+          <span>Systems over motivation</span>
+        </div>
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4 print:hidden">

@@ -18,6 +18,7 @@ const dashboardPage = readFileSync(new URL('../src/app/dashboard/page.tsx', impo
 const supabaseClient = readFileSync(new URL('../src/lib/supabase/client.ts', import.meta.url), 'utf8');
 const privacyPage = readFileSync(new URL('../src/app/privacy/page.tsx', import.meta.url), 'utf8');
 const termsPage = readFileSync(new URL('../src/app/terms/page.tsx', import.meta.url), 'utf8');
+const studyPage = readFileSync(new URL('../src/app/study/page.tsx', import.meta.url), 'utf8');
 
 assert(home.includes('Private by default') && home.includes('Privado por defecto'), 'Home should show compact privacy reassurance under the free/no-card stats in both languages.');
 assert(home.includes('We don’t sell, publish, or use your ideas to build competing businesses') && home.includes('No vendemos, publicamos ni usamos tus ideas para construir negocios competidores'), 'Home privacy copy should explicitly address idea theft concerns.');
@@ -29,6 +30,11 @@ assert(marketStudyPreview.includes('Complete Market Study') && marketStudyPrevie
 assert(marketStudyPreview.includes('max-h-[82vh]') && marketStudyPreview.includes('overflow-y-auto') && marketStudyPreview.includes('blur-[3px]'), 'Market Study preview should be an internal scrollable PDF-style preview with blurred locked sections.');
 assert(marketStudyPreview.includes('basada en la plantilla real del PDF') && marketStudyPreview.includes('generic preview based on the real PDF template'), 'Market Study preview should clarify it is a generic preview based on the real PDF template and the real report is generated after purchase.');
 assert(marketStudyPreview.includes('🛒') && marketStudyPreview.includes('Comprar Market Study') && marketStudyPreview.includes('Secure payment processed by Stripe') && marketStudyPreview.includes('$49 USD'), 'Market Study checkout CTA should feel professional: cart icon, product-focused copy, secure payment note, and price separated as metadata.');
+assert(marketStudyPreview.includes('AI Norte') && marketStudyPreview.includes('Systems over motivation'), 'Market Study preview should carry AI Norte branding, not just app UI chrome.');
+assert(marketStudyPreview.includes('result.categories.map') && marketStudyPreview.includes('Basic analysis signal') && marketStudyPreview.includes('Señal del análisis básico'), 'Preview unlocked content should reuse already-generated free analysis/category cards instead of spending on new research before purchase.');
+assert(!marketStudyPreview.includes('$4.8B') && !marketStudyPreview.includes('$420M'), 'Preview should not show fake market-sizing values as if generated before checkout.');
+assert(studyPage.includes('AI Norte') && studyPage.includes('Systems over motivation') && studyPage.includes('Prepared as a lightweight consulting report'), 'Final Market Study should use hybrid light-consulting + AI Norte branded framing.');
+assert(studyPage.includes('window.print()') && studyPage.includes('Download PDF'), 'Final Market Study should keep PDF download as the primary delivery behavior.');
 assert(home.includes('Privacy') && home.includes('Terms') && home.includes('mailto:tars@ai-norte.com'), 'Footer should link to privacy, terms, and contact without adding an About section to ratemyidea.');
 assert(home.includes('href="/"') && home.includes('aria-label="Go to Rate My Idea home"'), 'Header Rate My Idea logo should link back to the home/start state.');
 assert(privacyPage.includes('We do not sell your ideas') && privacyPage.includes('No vendemos tus ideas'), 'Privacy page should include the agreed idea-protection promise in EN and ES.');

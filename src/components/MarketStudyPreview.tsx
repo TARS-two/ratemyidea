@@ -7,6 +7,14 @@ type PreviewResult = {
   overall: number;
   summary: string;
   risks: string[];
+  strengths?: string[];
+  nextSteps?: string[];
+  categories: {
+    name: string;
+    score: number;
+    emoji: string;
+    comment: string;
+  }[];
 };
 
 interface MarketStudyPreviewProps {
@@ -17,9 +25,10 @@ interface MarketStudyPreviewProps {
   onCheckout: () => void;
 }
 
-function PreviewSection({ title, icon, children, locked = false }: { title: string; icon: string; children: React.ReactNode; locked?: boolean }) {
+function PreviewSection({ title, kicker, icon, children, locked = false }: { title: string; kicker?: string; icon: string; children: React.ReactNode; locked?: boolean }) {
   return (
     <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-5 md:p-6">
+      {kicker && <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--electric-light)]">{kicker}</p>}
       <h4 className="mb-4 flex items-center gap-2 text-lg font-bold text-[var(--text-primary)]">
         <span>{icon}</span> {title}
       </h4>
@@ -42,14 +51,25 @@ function LockedOverlay({ lang }: { lang: Lang }) {
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/25 px-4 text-center">
       <span className="rounded-full border border-white/15 bg-black/70 px-4 py-2 text-xs font-bold text-white shadow-xl backdrop-blur-sm">
-        {lang === "es" ? "Información específica protegida hasta completar la compra" : "Specific information protected until checkout is complete"}
+        {lang === "es" ? "Investigación específica desbloqueada después de la compra" : "Specific research unlocked after purchase"}
       </span>
+    </div>
+  );
+}
+
+function PlaceholderLines() {
+  return (
+    <div className="space-y-2">
+      <div className="h-3 w-full rounded-full bg-white/20" />
+      <div className="h-3 w-11/12 rounded-full bg-white/15" />
+      <div className="h-3 w-4/5 rounded-full bg-white/10" />
     </div>
   );
 }
 
 export default function MarketStudyPreview({ lang, result, loading, onClose, onCheckout }: MarketStudyPreviewProps) {
   const isEs = lang === "es";
+  const primaryRisk = result.risks[0] || (isEs ? "Validar demanda real antes de escalar." : "Validate real demand before scaling.");
 
   return (
     <div
@@ -59,16 +79,18 @@ export default function MarketStudyPreview({ lang, result, loading, onClose, onC
       <div className="w-full max-w-4xl overflow-hidden rounded-3xl border border-[var(--electric)]/30 bg-[var(--midnight)] shadow-2xl shadow-[var(--electric)]/10 animate-fade-up">
         <div className="flex items-start justify-between gap-4 border-b border-white/10 bg-[var(--surface)] px-6 py-5">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--electric-light)]">
-              {isEs ? "Preview del PDF" : "PDF preview"}
-            </p>
+            <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[var(--electric-light)]">
+              <span>AI Norte</span>
+              <span className="text-white/20">/</span>
+              <span>Systems over motivation</span>
+            </div>
             <h3 className="mt-2 text-2xl font-bold text-[var(--text-primary)]">
-              {isEs ? "Market Study — muestra del entregable" : "Market Study — deliverable sample"}
+              {isEs ? "Market Study — preview del reporte PDF" : "Market Study — PDF report preview"}
             </h3>
             <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">
               {isEs
-                ? "Esta previsualización usa la misma estructura visual del reporte final. Los datos estratégicos se ocultan para proteger el contenido pagado."
-                : "This preview uses the same visual structure as the final report. Strategic details are hidden to protect the paid content."}
+                ? "Consultoría ligera con branding AI Norte: desbloqueamos solo la señal del análisis básico que ya generaste; la investigación profunda se produce después del pago."
+                : "Light consulting report with AI Norte branding: only the already-generated basic analysis signal is unlocked; deep research is produced after payment."}
             </p>
           </div>
           <button onClick={onClose} className="text-xl leading-none text-[var(--text-muted)] transition-colors hover:text-white cursor-pointer">✕</button>
@@ -76,48 +98,60 @@ export default function MarketStudyPreview({ lang, result, loading, onClose, onC
 
         <div className="max-h-[82vh] overflow-y-auto bg-[var(--midnight)] px-4 py-6 md:px-8">
           <div className="mx-auto max-w-3xl space-y-6 rounded-[2rem] border border-white/10 bg-black/20 p-5 shadow-inner shadow-black/40 md:p-8">
-            <header className="border-b border-white/10 pb-6 text-center">
+            <header className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[var(--surface)] via-[var(--surface)] to-[var(--electric)]/15 p-7 text-center">
               <p className="mb-2 text-sm uppercase tracking-wider text-[var(--electric-light)]">Complete Market Study</p>
               <h4 className="text-3xl font-bold text-white">{result.ideaName}</h4>
-              <div className="mt-4 flex items-center justify-center gap-3">
+              <p className="mt-2 text-xs uppercase tracking-[0.3em] text-[var(--text-muted)]">AI Norte Research Brief</p>
+              <p className="mt-3 text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                Executive Summary · Market Analysis · Competitor Analysis · Target Audience · Go-to-Market · Financial Projections
+              </p>
+              <div className="mt-5 flex items-center justify-center gap-3">
                 <span className="text-4xl font-bold text-[var(--electric-light)]">{result.overall.toFixed(1)}/10</span>
-                <RiskBadge text={isEs ? "CAUTION" : "CAUTION"} tone="caution" />
+                <RiskBadge text="PREVIEW" tone="caution" />
               </div>
             </header>
 
-            <PreviewSection title={isEs ? "Resumen ejecutivo" : "Executive Summary"} icon="📋">
+            <PreviewSection
+              title={isEs ? "Señal del análisis básico" : "Basic analysis signal"}
+              kicker={isEs ? "desbloqueado sin investigación adicional" : "unlocked without additional research"}
+              icon="📋"
+            >
               <p className="leading-relaxed text-[var(--text-secondary)]">{result.summary}</p>
-              <p className="mt-3 text-[var(--text-muted)]">
-                {isEs
-                  ? "El reporte final amplía esta señal con investigación de mercado, competencia, audiencia objetivo, ruta de lanzamiento, proyecciones financieras y recomendación final."
-                  : "The final report expands this signal with market research, competition, target audience, launch path, financial projections, and final recommendation."}
-              </p>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {result.categories.map((category) => (
+                  <div key={category.name} className="rounded-xl border border-white/10 bg-[var(--surface-light)] p-4">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <p className="font-semibold text-white"><span className="mr-1">{category.emoji}</span>{category.name}</p>
+                      <span className="rounded-full bg-[var(--electric)]/15 px-2 py-0.5 text-xs font-bold text-[var(--electric-light)]">{category.score}/10</span>
+                    </div>
+                    <p className="text-xs leading-relaxed text-[var(--text-muted)]">{category.comment}</p>
+                  </div>
+                ))}
+              </div>
+              {result.strengths && result.strengths.length > 0 && (
+                <div className="mt-5 rounded-xl border border-green-400/15 bg-green-400/10 p-4">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-green-200">{isEs ? "Fortalezas ya detectadas" : "Already-detected strengths"}</p>
+                  <ul className="space-y-1 text-sm text-[var(--text-secondary)]">
+                    {result.strengths.slice(0, 2).map((strength) => <li key={strength}>• {strength}</li>)}
+                  </ul>
+                </div>
+              )}
             </PreviewSection>
 
             <div className="relative">
               <PreviewSection title={isEs ? "Análisis de mercado" : "Market Analysis"} icon="📊" locked>
-                <p className="mb-5 leading-relaxed text-[var(--text-secondary)]">
-                  The market is shaped by rising automation adoption, increasing software spend, and a clear gap between enterprise tools and underserved niche buyers.
-                </p>
+                <p className="mb-5 leading-relaxed text-[var(--text-secondary)]">Market sizing, demand signals, adoption timing, source-backed trends, and constraints.</p>
                 <div className="mb-6 grid gap-4 sm:grid-cols-3">
-                  {[
-                    { label: "TAM", value: "$4.8B–$7.2B estimated opportunity" },
-                    { label: "SAM", value: "$420M reachable segment" },
-                    { label: "SOM", value: "$850K–$1.4M realistic early capture" },
-                  ].map((item) => (
-                    <div key={item.label} className="rounded-xl border border-white/5 bg-[var(--surface-light)] p-4">
-                      <p className="mb-1 text-xs font-semibold text-[var(--electric-light)]">{item.label}</p>
-                      <p className="text-sm text-[var(--text-secondary)]">{item.value}</p>
+                  {["TAM", "SAM", "SOM"].map((label) => (
+                    <div key={label} className="rounded-xl border border-white/5 bg-[var(--surface-light)] p-4">
+                      <p className="mb-2 text-xs font-semibold text-[var(--electric-light)]">{label}</p>
+                      <PlaceholderLines />
                     </div>
                   ))}
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="h-28 rounded-xl bg-gradient-to-r from-[var(--electric)]/50 via-cyan-300/25 to-emerald-300/30" />
-                  <ul className="space-y-1 text-sm text-[var(--text-secondary)]">
-                    <li>→ Demand trend with cited market sources</li>
-                    <li>→ Buyer urgency and adoption timing</li>
-                    <li>→ Growth drivers and constraints</li>
-                  </ul>
+                  <PlaceholderLines />
                 </div>
               </PreviewSection>
               <LockedOverlay lang={lang} />
@@ -125,13 +159,12 @@ export default function MarketStudyPreview({ lang, result, loading, onClose, onC
 
             <div className="relative">
               <PreviewSection title={isEs ? "Análisis competitivo" : "Competitor Analysis"} icon="⚔️" locked>
-                <p className="mb-5 text-[var(--text-secondary)]">Competitive landscape summary with 3–5 comparable companies, pricing, strengths, weaknesses, and market gaps.</p>
+                <p className="mb-5 text-[var(--text-secondary)]">Competitive landscape summary with comparable companies, pricing, strengths, weaknesses, and market gaps.</p>
                 <div className="space-y-4">
-                  {["Competitor A", "Competitor B", "Competitor C"].map((name) => (
+                  {["Competitor profile", "Positioning gap", "Defensibility angle"].map((name) => (
                     <div key={name} className="rounded-xl border border-white/5 bg-[var(--surface-light)] p-4">
-                      <div className="mb-2 flex items-center justify-between"><h5 className="font-semibold text-white">{name}</h5><span className="text-xs text-[var(--text-muted)]">$19–$99/mo</span></div>
-                      <p className="mb-2 text-sm text-[var(--text-secondary)]">Positioning, key feature set, and commercial threat level.</p>
-                      <div className="grid grid-cols-2 gap-2 text-xs text-[var(--text-muted)]"><span>+ Strong distribution</span><span>− Weak niche workflow</span></div>
+                      <div className="mb-2 flex items-center justify-between"><h5 className="font-semibold text-white">{name}</h5><span className="text-xs text-[var(--text-muted)]">locked</span></div>
+                      <PlaceholderLines />
                     </div>
                   ))}
                 </div>
@@ -143,9 +176,8 @@ export default function MarketStudyPreview({ lang, result, loading, onClose, onC
               <div className="grid gap-4 sm:grid-cols-2">
                 {[isEs ? "Persona primaria" : "Primary persona", isEs ? "Persona secundaria" : "Secondary persona"].map((label) => (
                   <div key={label} className="rounded-xl border border-white/5 bg-[var(--surface-light)] p-4">
-                    <h5 className="mb-1 font-semibold text-[var(--electric-light)]">{label}</h5>
-                    <p className="mb-3 text-xs text-[var(--text-muted)]">Buyer profile, budget owner, decision trigger, and channels.</p>
-                    <ul className="space-y-1 text-sm text-[var(--text-secondary)]"><li>• Pain point with urgency</li><li>• Goal tied to measurable outcome</li><li>• Best acquisition channel</li></ul>
+                    <h5 className="mb-3 font-semibold text-[var(--electric-light)]">{label}</h5>
+                    <PlaceholderLines />
                   </div>
                 ))}
               </div>
@@ -154,24 +186,21 @@ export default function MarketStudyPreview({ lang, result, loading, onClose, onC
             <PreviewSection title={isEs ? "Go-to-Market" : "Go-to-Market Strategy"} icon="🎯" locked>
               <div className="mb-4 rounded-xl border border-[var(--electric)]/20 bg-[var(--surface-light)] p-4">
                 <p className="mb-1 text-sm font-semibold text-[var(--electric-light)]">Positioning</p>
-                <p className="italic text-[var(--text-secondary)]">“Narrow, fast-to-adopt solution for a painful recurring workflow.”</p>
+                <PlaceholderLines />
               </div>
               <div className="space-y-2 text-sm text-[var(--text-secondary)]">
-                <p>💰 Pricing strategy with willingness-to-pay rationale.</p>
-                <p>📢 Priority channels ranked high / medium / low.</p>
-                <p>🗓️ 30/60/90-day launch plan.</p>
+                <p>💰 Pricing rationale</p>
+                <p>📢 Priority channels</p>
+                <p>🗓️ 30/60/90-day launch plan</p>
               </div>
             </PreviewSection>
 
             <PreviewSection title={isEs ? "Proyecciones financieras" : "Financial Projections"} icon="💰" locked>
               <div className="mb-4 grid gap-4 sm:grid-cols-2">
-                {[
-                  { label: "Year 1", revenue: "$48K–$96K", costs: "$18K–$35K" },
-                  { label: "Year 2", revenue: "$180K–$420K", costs: "$65K–$140K" },
-                ].map((year) => (
-                  <div key={year.label} className="rounded-xl border border-white/5 bg-[var(--surface-light)] p-4">
-                    <h5 className="mb-2 font-semibold text-[var(--electric-light)]">{year.label}</h5>
-                    <div className="space-y-1 text-sm"><div className="flex justify-between"><span className="text-[var(--text-muted)]">Revenue</span><span className="text-green-300">{year.revenue}</span></div><div className="flex justify-between"><span className="text-[var(--text-muted)]">Costs</span><span className="text-red-300">{year.costs}</span></div></div>
+                {["Year 1", "Year 2"].map((year) => (
+                  <div key={year} className="rounded-xl border border-white/5 bg-[var(--surface-light)] p-4">
+                    <h5 className="mb-3 font-semibold text-[var(--electric-light)]">{year}</h5>
+                    <PlaceholderLines />
                   </div>
                 ))}
               </div>
@@ -179,22 +208,20 @@ export default function MarketStudyPreview({ lang, result, loading, onClose, onC
             </PreviewSection>
 
             <PreviewSection title={isEs ? "Riesgos y veredicto" : "Risk Assessment & Verdict"} icon="⚠️">
-              <div className="space-y-3">
-                <div className="rounded-xl border border-white/5 bg-[var(--surface-light)] p-4">
-                  <div className="mb-2 flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{result.risks[0] || (isEs ? "Validar demanda real antes de escalar." : "Validate real demand before scaling.")}</p>
-                    <div className="flex gap-1"><RiskBadge text="L: medium" tone="medium" /><RiskBadge text="I: high" tone="high" /></div>
-                  </div>
-                  <p className="text-xs text-[var(--text-muted)]">💡 {isEs ? "El reporte final incluye mitigación y experimento recomendado." : "The final report includes mitigation and a recommended experiment."}</p>
+              <div className="rounded-xl border border-white/5 bg-[var(--surface-light)] p-4">
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{primaryRisk}</p>
+                  <div className="flex gap-1"><RiskBadge text="L: medium" tone="medium" /><RiskBadge text="I: high" tone="high" /></div>
                 </div>
+                <p className="text-xs text-[var(--text-muted)]">💡 {isEs ? "El reporte final incluye mitigación y experimento recomendado." : "The final report includes mitigation and a recommended experiment."}</p>
               </div>
             </PreviewSection>
           </div>
 
           <div className="mx-auto mt-5 max-w-3xl rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 text-xs text-amber-100">
             {isEs
-              ? "Nota: esta es una previsualización genérica basada en la plantilla real del PDF. El Market Study final se genera después de la compra con tu idea, fuentes disponibles y análisis específico. Es una herramienta de apoyo para decidir; no es asesoría legal, financiera ni de inversión, y no garantiza rentabilidad, demanda o éxito comercial."
-              : "Note: this is a generic preview based on the real PDF template. The final Market Study is generated after purchase with your idea, available sources, and specific analysis. It is a decision-support tool, not legal, financial, or investment advice, and it does not guarantee profitability, demand, or business success."}
+              ? "Nota: esta es una previsualización genérica basada en la plantilla real del PDF. La sección desbloqueada usa únicamente información ya producida por tu análisis básico; el Market Study final se genera después de la compra con investigación, fuentes disponibles y análisis específico."
+              : "Note: this is a generic preview based on the real PDF template. The unlocked section only uses information already produced by your basic analysis; the final Market Study is generated after purchase with research, available sources, and specific analysis."}
           </div>
 
           <div className="sticky bottom-0 mx-auto mt-5 max-w-3xl rounded-2xl border border-white/10 bg-[var(--midnight)]/95 p-4 shadow-2xl backdrop-blur-md">

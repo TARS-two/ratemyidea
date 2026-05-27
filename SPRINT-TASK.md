@@ -1,5 +1,13 @@
 # Sprint Task: Auth + Monetization for ratemyidea.ai
 
+> Historical implementation brief. Do not use this as current product state.
+> Current source of truth lives in:
+> - `/Users/tars/Projects/ai-norte/01-direccion/product-current.md`
+> - `/Users/tars/Projects/ai-norte/01-direccion/tasks.md`
+> - `/Users/tars/Projects/ai-norte/01-direccion/ratemyidea-sales-tracking.md`
+>
+> As of 2026-05-27, the repo also contains local verified commits pending Phil push/deploy for controlled-sale feedback fixes and the Market Study hybrid AI Norte consulting-style report experience.
+
 ## PRODUCT SPEC
 
 **Free tier:**

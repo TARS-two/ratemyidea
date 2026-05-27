@@ -94,6 +94,19 @@ function getErrorMessage(value: unknown, fallback: string): string {
   return fallback;
 }
 
+function detectIdeaLanguage(text: string): Lang {
+  const normalized = text.toLowerCase();
+  const spanishSignals = [
+    " que ", " para ", " con ", " una ", " un ", " los ", " las ", " negocio", " mercado",
+    " clientes", " méxico", " mexico", " español", " años", " sería", " podría", " quiero", " tengo",
+  ];
+  const hasSpanishChars = /[áéíóúñ¿¡]/i.test(text);
+  const padded = ` ${normalized} `;
+  const signalCount = spanishSignals.filter((signal) => padded.includes(signal)).length;
+
+  return hasSpanishChars || signalCount >= 2 ? "es" : "en";
+}
+
 /* ---------- score ring ---------- */
 function ScoreRing({ score }: { score: number }) {
   const circumference = 2 * Math.PI * 45;
@@ -236,6 +249,7 @@ export default function HomeClient() {
   const [planLoading, setPlanLoading] = useState(false);
   const [ideaHistory, setIdeaHistory] = useState<HistoryEvaluation[]>([]);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
+  const [savedCurrentResultKey, setSavedCurrentResultKey] = useState<string | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
   const s = t[lang];
@@ -396,7 +410,10 @@ export default function HomeClient() {
     setUserSession(session);
     localStorage.setItem("rmi_session", JSON.stringify(session));
     setShowAuthModal(false);
-    await refreshUserAndProfile();
+    const hydratedSession = await refreshUserAndProfile();
+    if ((hydratedSession?.isPro || session.isPro) && result) {
+      await saveCurrentResultToProHistory(hydratedSession || session);
+    }
     if (claimShareCreditAfterAuth || localStorage.getItem(PENDING_SHARE_CREDIT_KEY) === "true") {
       setClaimShareCreditAfterAuth(false);
       void claimPendingShareCredit(token);
@@ -446,6 +463,35 @@ export default function HomeClient() {
     setIdeaHistory((data || []) as HistoryEvaluation[]);
   }
 
+  async function saveCurrentResultToProHistory(session: UserSession) {
+    if (!result || !session?.token) return;
+    const currentKey = `${session.userId}:${idea.trim()}:${result.overall.toFixed(1)}`;
+    if (savedCurrentResultKey === currentKey) return;
+
+    try {
+      const response = await fetch("/api/history/save-current", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          authToken: session.token,
+          ideaText: idea.trim(),
+          result,
+          lang,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        console.error("Could not save current result to Pro history:", data.error);
+        return;
+      }
+      setSavedCurrentResultKey(currentKey);
+      await fetchIdeaHistory(session.userId);
+      if (data.id) setSelectedHistoryId(data.id);
+    } catch (error) {
+      console.error("Could not save current result to Pro history:", error);
+    }
+  }
+
   function selectHistoryEvaluation(item: HistoryEvaluation) {
     setSelectedHistoryId(item.id);
     setIdea(item.idea_text);
@@ -492,12 +538,19 @@ export default function HomeClient() {
     e.preventDefault();
     if (!idea.trim()) return;
 
+    const detectedIdeaLang = detectIdeaLanguage(idea.trim());
+    if (detectedIdeaLang !== lang) {
+      setLang(detectedIdeaLang);
+      localStorage.setItem("lang", detectedIdeaLang);
+    }
+
     setLoading(true);
     setError("");
     setResult(null);
     setEvaluationMeta(null);
     setBenchmark(null);
     setStrategicPlan(null);
+    setSavedCurrentResultKey(null);
 
     try {
       const res = await fetch("/api/rate", {
@@ -506,7 +559,7 @@ export default function HomeClient() {
         body: JSON.stringify({
           idea: idea.trim(),
           email: email.trim() || undefined,
-          lang,
+          lang: detectedIdeaLang,
           authToken: userSession?.token,
         }),
       });
@@ -792,12 +845,20 @@ export default function HomeClient() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[var(--midnight)]/80 backdrop-blur-xl border-b border-white/5">
         <div className="mx-auto max-w-5xl flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
+            <a
+              href="/"
+              aria-label="Go to Rate My Idea home"
+              onClick={(e) => {
+                e.preventDefault();
+                handleReset();
+              }}
+              className="flex items-center gap-2 transition-opacity hover:opacity-80"
+            >
               <span className="text-xl">🧠</span>
               <span className="font-bold text-lg tracking-tight">
                 {s.brand}
               </span>
-            </div>
+            </a>
             <a
               href="https://ai-norte.com"
               className="items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--electric-light)] transition-colors hidden sm:flex"
@@ -1404,74 +1465,100 @@ export default function HomeClient() {
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) setShowMarketStudyPreview(false); }}
         >
-          <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-[var(--electric)]/30 bg-[var(--surface)] shadow-2xl shadow-[var(--electric)]/10 animate-fade-up">
+          <div className="w-full max-w-3xl overflow-hidden rounded-3xl border border-[var(--electric)]/30 bg-[var(--surface)] shadow-2xl shadow-[var(--electric)]/10 animate-fade-up">
             <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--electric-light)]">
-                  {lang === "es" ? "Antes de pagar" : "Before checkout"}
+                  {lang === "es" ? "Preview antes de pagar" : "Preview before checkout"}
                 </p>
                 <h3 className="mt-2 text-2xl font-bold text-[var(--text-primary)]">
-                  {lang === "es" ? "Qué incluye el Market Study" : "What the Market Study includes"}
+                  {lang === "es" ? "Market Study — ejemplo del archivo" : "Market Study — sample file preview"}
                 </h3>
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                  {lang === "es" ? "Un reporte más profundo para decidir si avanzar, pausar o ajustar esta idea antes de invertir más tiempo o dinero." : "A deeper report to help you decide whether to move forward, pause, or adjust this idea before investing more time or money."}
+                  {lang === "es" ? "Revisa títulos, estructura y tipo de análisis. El texto y gráficos específicos se muestran borrosos hasta completar la compra." : "Review the titles, structure, and kind of analysis. Specific text and charts stay blurred until purchase is complete."}
                 </p>
               </div>
               <button onClick={() => setShowMarketStudyPreview(false)} className="text-xl leading-none text-[var(--text-muted)] transition-colors hover:text-white cursor-pointer">✕</button>
             </div>
 
-            <div className="grid gap-4 px-6 py-5 sm:grid-cols-[1fr_0.9fr]">
-              <div className="space-y-3">
-                {[
-                  lang === "es" ? "market overview / panorama del mercado" : "market overview",
-                  lang === "es" ? "target customer / cliente objetivo" : "target customer",
-                  lang === "es" ? "competitors / competidores" : "competitors",
-                  lang === "es" ? "pricing angle / estrategia de precio" : "pricing angle",
-                  lang === "es" ? "risks / riesgos" : "risks",
-                  lang === "es" ? "go/no-go recommendation / recomendación de avanzar o pausar" : "go/no-go recommendation",
-                  lang === "es" ? "next steps / siguientes pasos" : "next steps",
-                ].map((item) => (
-                  <div key={item} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-[var(--text-secondary)]">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--electric)]/15 text-xs text-[var(--electric-light)]">✓</span>
-                    <span>{item}</span>
+            <div className="max-h-[85vh] overflow-y-auto px-6 py-5">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-inner shadow-black/20">
+                <div className="mb-5 flex items-start justify-between gap-4 border-b border-white/10 pb-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Rate My Idea Market Study</p>
+                    <h4 className="mt-2 text-xl font-bold text-white">{result.ideaName}</h4>
                   </div>
-                ))}
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                  {lang === "es" ? "Preview parcial" : "Partial preview"}
-                </p>
-                <div className="space-y-3 text-sm">
-                  <div className="rounded-xl bg-[var(--surface-light)] p-3">
-                    <p className="font-semibold text-[var(--text-primary)]">{lang === "es" ? "1. Señal inicial" : "1. Initial signal"}</p>
-                    <p className="mt-1 text-[var(--text-muted)]">{result.ideaName}: {result.overall.toFixed(1)}/10</p>
-                  </div>
-                  <div className="rounded-xl bg-[var(--surface-light)] p-3">
-                    <p className="font-semibold text-[var(--text-primary)]">{lang === "es" ? "2. Riesgo principal" : "2. Main risk"}</p>
-                    <p className="mt-1 text-[var(--text-muted)]">{result.risks[0] || (lang === "es" ? "Validar demanda real." : "Validate real demand.")}</p>
-                  </div>
-                  <div className="relative overflow-hidden rounded-xl bg-[var(--surface-light)] p-3">
-                    <div className="blur-sm select-none">
-                      <p className="font-semibold text-[var(--text-primary)]">{lang === "es" ? "3. Competidores + estrategia" : "3. Competitors + strategy"}</p>
-                      <p className="mt-1 text-[var(--text-muted)]">•••••• ••••• ••••••• ••••• ••••••••• •••••</p>
-                    </div>
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/35 text-xs font-bold text-white">
-                      {lang === "es" ? "Se desbloquea con el estudio" : "Unlocked in the full study"}
-                    </div>
+                  <div className="rounded-xl bg-[var(--electric)]/15 px-3 py-2 text-sm font-semibold text-[var(--electric-light)]">
+                    {result.overall.toFixed(1)}/10
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="border-t border-white/10 px-6 py-5">
-              <p className="mb-4 text-xs text-[var(--text-muted)]">
-                {lang === "es" ? "Nota: este reporte es una herramienta de apoyo para decidir. No es asesoría legal, financiera ni de inversión, y no garantiza rentabilidad, demanda o éxito comercial." : "Note: this report is a decision-support tool. It is not financial, legal, investment, or professional advice, and it does not guarantee profitability, demand, or business success."}
-              </p>
+                <div className="space-y-5 text-sm">
+                  <section>
+                    <h5 className="mb-2 font-bold text-white">1. {lang === "es" ? "Resumen ejecutivo" : "Executive summary"}</h5>
+                    <p className="text-[var(--text-secondary)]">
+                      {lang === "es" ? "Señal inicial basada en tu evaluación: " : "Initial signal based on your evaluation: "}
+                      {result.summary}
+                    </p>
+                  </section>
+
+                  <section>
+                    <h5 className="mb-2 font-bold text-white">2. {lang === "es" ? "Panorama del mercado" : "Market overview"}</h5>
+                    <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/25 p-4">
+                      <div className="blur-sm select-none space-y-2">
+                        <p className="text-[var(--text-muted)]">TAM / SAM / SOM estimate with source notes and adoption timing.</p>
+                        <div className="h-24 rounded-lg bg-gradient-to-r from-[var(--electric)]/45 via-cyan-300/25 to-emerald-300/30" />
+                        <p className="text-[var(--text-muted)]">•••••• ••••• ••••••• ••••• ••••••••• ••••• ••••• •••••••••</p>
+                      </div>
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/35 text-xs font-bold text-white">
+                        {lang === "es" ? "Datos específicos desbloqueados después de la compra" : "Specific data unlocked after purchase"}
+                      </div>
+                    </div>
+                  </section>
+
+                  <section>
+                    <h5 className="mb-2 font-bold text-white">3. {lang === "es" ? "Cliente objetivo y caso de uso" : "Target customer and use case"}</h5>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-xl bg-[var(--surface-light)] p-3">
+                        <p className="font-semibold text-white">{lang === "es" ? "Segmento primario" : "Primary segment"}</p>
+                        <p className="mt-1 blur-sm select-none text-[var(--text-muted)]">B2B teams with urgent workflow pain and clear budget owner.</p>
+                      </div>
+                      <div className="rounded-xl bg-[var(--surface-light)] p-3">
+                        <p className="font-semibold text-white">{lang === "es" ? "Disparador de compra" : "Purchase trigger"}</p>
+                        <p className="mt-1 blur-sm select-none text-[var(--text-muted)]">Manual process cost exceeds estimated subscription price.</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section>
+                    <h5 className="mb-2 font-bold text-white">4. {lang === "es" ? "Competidores y posicionamiento" : "Competitors and positioning"}</h5>
+                    <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/25 p-4">
+                      <div className="blur-sm select-none space-y-2 text-[var(--text-muted)]">
+                        <p>Competitor A — broad platform, high switching cost.</p>
+                        <p>Competitor B — cheaper point solution, weaker automation.</p>
+                        <p>White-space: faster onboarding + narrower vertical workflow.</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section>
+                    <h5 className="mb-2 font-bold text-white">5. {lang === "es" ? "Precio, riesgos y recomendación" : "Pricing, risks, and recommendation"}</h5>
+                    <div className="space-y-2 rounded-xl bg-[var(--surface-light)] p-4">
+                      <p className="text-[var(--text-secondary)]">{lang === "es" ? "Riesgo principal detectado: " : "Main detected risk: "}{result.risks[0] || (lang === "es" ? "Validar demanda real." : "Validate real demand.")}</p>
+                      <p className="blur-sm select-none text-[var(--text-muted)]">Go/no-go recommendation, pricing test, 7-day validation script, and first outreach list.</p>
+                    </div>
+                  </section>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 text-xs text-amber-100">
+                {lang === "es" ? "Nota: este preview muestra un archivo genérico muy cercano al producto final; el Market Study real se genera después de la compra con base en tu idea y la investigación disponible. Es una herramienta de apoyo para decidir, no asesoría legal, financiera ni de inversión, y no garantiza rentabilidad, demanda o éxito comercial." : "Note: this is a generic preview very close to the final product; the real Market Study is generated after purchase based on your idea and available research. It is a decision-support tool, not financial, legal, investment, or professional advice, and it does not guarantee profitability, demand, or business success."}
+              </div>
+
               <button
                 onClick={startMarketStudyCheckout}
                 disabled={marketStudyCheckoutLoading}
-                className="w-full rounded-xl bg-[var(--electric)] px-6 py-4 text-base font-semibold text-white transition-all hover:bg-[var(--electric-dark)] disabled:opacity-60 cursor-pointer glow-pulse"
+                className="mt-5 w-full rounded-xl bg-[var(--electric)] px-6 py-4 text-base font-semibold text-white transition-all hover:bg-[var(--electric-dark)] disabled:opacity-60 cursor-pointer glow-pulse"
               >
                 {marketStudyCheckoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "Continuar al pago — $49" : "Continue to checkout — $49")}
               </button>

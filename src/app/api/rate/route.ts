@@ -90,6 +90,19 @@ function getClientIP(request: NextRequest): string {
   );
 }
 
+function detectIdeaLanguage(text: string): "en" | "es" {
+  const normalized = text.toLowerCase();
+  const spanishSignals = [
+    " que ", " para ", " con ", " una ", " un ", " los ", " las ", " negocio", " mercado",
+    " clientes", " méxico", " mexico", " español", " años", " sería", " podría", " quiero", " tengo",
+  ];
+  const hasSpanishChars = /[áéíóúñ¿¡]/i.test(text);
+  const padded = ` ${normalized} `;
+  const signalCount = spanishSignals.filter((signal) => padded.includes(signal)).length;
+
+  return hasSpanishChars || signalCount >= 2 ? "es" : "en";
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -108,6 +121,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const responseLang = lang === "es" || lang === "en" ? lang : detectIdeaLanguage(idea);
 
     if (!ANTHROPIC_API_KEY) {
       return NextResponse.json({ error: "Service not configured." }, { status: 500 });
@@ -249,7 +264,7 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: "user",
-          content: `${lang === "es" ? "[Respond in Spanish]\n\n" : "[Respond in English]\n\n"}Rate this business idea:\n\n${idea.trim()}${searchContext}`,
+          content: `${responseLang === "es" ? "[Respond in Spanish]\n\n" : "[Respond in English]\n\n"}Rate this business idea:\n\n${idea.trim()}${searchContext}`,
         },
       ],
     });
@@ -306,7 +321,7 @@ export async function POST(request: NextRequest) {
         idea_name: parsed.ideaName,
         overall_score: parsed.overall,
         category,
-        lang: lang || "en",
+        lang: responseLang,
         badge: badge.label,
         result_json: parsed,
       });

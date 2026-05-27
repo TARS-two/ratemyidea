@@ -8,6 +8,7 @@ const webhookRoute = readFileSync(new URL('../src/app/api/stripe/webhook/route.t
 const confirmRoute = readFileSync(new URL('../src/app/api/stripe/confirm/route.ts', import.meta.url), 'utf8');
 const shareCreditRoute = readFileSync(new URL('../src/app/api/share-credit/route.ts', import.meta.url), 'utf8');
 const rateRoute = readFileSync(new URL('../src/app/api/rate/route.ts', import.meta.url), 'utf8');
+const saveCurrentRoute = readFileSync(new URL('../src/app/api/history/save-current/route.ts', import.meta.url), 'utf8');
 const rateSearch = readFileSync(new URL('../src/app/api/rate/search.ts', import.meta.url), 'utf8');
 const strategicPlanRoute = readFileSync(new URL('../src/app/api/strategic-plan/route.ts', import.meta.url), 'utf8');
 const shareCardRoute = readFileSync(new URL('../src/app/api/share-card/route.tsx', import.meta.url), 'utf8');
@@ -19,13 +20,20 @@ const termsPage = readFileSync(new URL('../src/app/terms/page.tsx', import.meta.
 
 assert(home.includes('Private by default') && home.includes('Privado por defecto'), 'Home should show compact privacy reassurance under the free/no-card stats in both languages.');
 assert(home.includes('We don’t sell, publish, or use your ideas to build competing businesses') && home.includes('No vendemos, publicamos ni usamos tus ideas para construir negocios competidores'), 'Home privacy copy should explicitly address idea theft concerns.');
+assert(home.includes('detectIdeaLanguage') && home.includes('setLang(detectedIdeaLang)'), 'Home should auto-select Spanish/English from the prompt before submitting so result language follows the idea, not just the UI.');
 assert(home.includes('navigator.language') && home.includes('localStorage.getItem("lang")'), 'Home should auto-detect browser Spanish while preserving saved language preference.');
+assert(rateRoute.includes('detectIdeaLanguage') && rateRoute.includes('const responseLang = lang === "es" || lang === "en" ? lang : detectIdeaLanguage(idea)'), '/api/rate should fall back to prompt-language detection when client language is missing or stale.');
 assert(home.includes('showMarketStudyPreview') && home.includes('Continue to checkout — $49') && home.includes('Continuar al pago — $49'), 'Market Study CTA should open an explanatory preview before Stripe checkout.');
-assert(home.includes('market overview') && home.includes('go/no-go recommendation') && home.includes('blur-sm'), 'Market Study preview should explain included sections and show locked/blurred value before payment.');
+assert(home.includes('max-h-[85vh]') && home.includes('overflow-y-auto') && home.includes('blur-sm'), 'Market Study preview should be an internal scrollable document-style preview with blurred locked sections.');
+assert(home.includes('generic preview very close to the final product') && home.includes('se genera después de la compra'), 'Market Study preview should clarify it is a generic close preview and the real report is generated after purchase.');
 assert(home.includes('Privacy') && home.includes('Terms') && home.includes('mailto:tars@ai-norte.com'), 'Footer should link to privacy, terms, and contact without adding an About section to ratemyidea.');
+assert(home.includes('href="/"') && home.includes('aria-label="Go to Rate My Idea home"'), 'Header Rate My Idea logo should link back to the home/start state.');
 assert(privacyPage.includes('We do not sell your ideas') && privacyPage.includes('No vendemos tus ideas'), 'Privacy page should include the agreed idea-protection promise in EN and ES.');
 assert(termsPage.includes('not financial, legal, investment, or professional advice') && termsPage.includes('No garantiza rentabilidad'), 'Terms page should include compact liability/disclaimer language.');
 assert(authModal.includes('resetPasswordForEmail') && authModal.includes('Password reset email sent') && authModal.includes('Te enviamos un correo para restablecer tu contraseña'), 'Auth modal should include password reset flow with localized success copy.');
+assert(authModal.includes('Invalid login credentials') && authModal.includes('Reset password'), 'Auth modal should surface a visible reset-password action after invalid credentials.');
+assert(home.includes('saveCurrentResultToProHistory') && home.includes('/api/history/save-current'), 'Logging into Pro with an open anonymous analysis should save that current result into Pro history.');
+assert(saveCurrentRoute.includes('Pro subscription required') && saveCurrentRoute.includes('user_subscriptions') && saveCurrentRoute.includes('idea_text'), 'Save-current history API should only attach an open result to an authenticated Pro user.');
 assert(supabaseClient.includes('isValidSupabaseUrl') && supabaseClient.includes('try {') && supabaseClient.includes('return false'), 'Supabase browser client should ignore invalid placeholder URLs instead of crashing local runtime.');
 
 assert(authModal.includes('emailRedirectTo'), 'Supabase signup should set emailRedirectTo so production confirmations do not go to localhost.');

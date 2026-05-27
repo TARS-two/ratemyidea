@@ -17,6 +17,7 @@ export default function AuthModal({ onClose, onSuccess, onUpgrade, isAuthenticat
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -27,6 +28,7 @@ export default function AuthModal({ onClose, onSuccess, onUpgrade, isAuthenticat
     if (!supabase) return setError("Auth service not available.");
     setLoading(true);
     setError("");
+    setSuccess("");
 
     try {
       if (tab === "signup") {
@@ -59,6 +61,32 @@ export default function AuthModal({ onClose, onSuccess, onUpgrade, isAuthenticat
       setError(msg);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handlePasswordReset() {
+    if (!supabase) return setError("Auth service not available.");
+    if (!email.trim()) {
+      setError(lang === "es" ? "Escribe tu correo para restablecer tu contraseña." : "Enter your email to reset your password.");
+      return;
+    }
+
+    setResetLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: window.location.origin,
+      });
+      if (err) throw err;
+      setSuccess(lang === "es"
+        ? "Te enviamos un correo para restablecer tu contraseña."
+        : "Password reset email sent. Check your inbox.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Password reset failed.";
+      setError(msg);
+    } finally {
+      setResetLoading(false);
     }
   }
 
@@ -155,13 +183,24 @@ export default function AuthModal({ onClose, onSuccess, onUpgrade, isAuthenticat
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || resetLoading}
               className="w-full py-3 bg-[var(--electric)] hover:bg-[var(--electric-dark)] disabled:opacity-50 text-white font-semibold rounded-xl transition-all cursor-pointer text-sm"
             >
               {loading ? "..." : tab === "signin"
                 ? (lang === "es" ? "Entrar" : "Sign in")
                 : (lang === "es" ? "Crear cuenta" : "Create account")}
             </button>
+
+            {tab === "signin" && (
+              <button
+                type="button"
+                onClick={handlePasswordReset}
+                disabled={loading || resetLoading}
+                className="w-full text-xs text-[var(--text-muted)] hover:text-[var(--electric-light)] disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                {resetLoading ? "..." : (lang === "es" ? "¿Olvidaste tu contraseña?" : "Forgot your password?")}
+              </button>
+            )}
           </form>
         )}
           </>

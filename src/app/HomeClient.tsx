@@ -221,6 +221,7 @@ export default function HomeClient() {
   const [shared, setShared] = useState(false);
   const [hideIdea, setHideIdea] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showMarketStudyPreview, setShowMarketStudyPreview] = useState(false);
   const [proCheckoutLoading, setProCheckoutLoading] = useState(false);
   const [marketStudyCheckoutLoading, setMarketStudyCheckoutLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -328,7 +329,11 @@ export default function HomeClient() {
   // Load lang + session from localStorage and Supabase on mount
   useEffect(() => {
     const savedLang = localStorage.getItem("lang");
-    if (savedLang === "en" || savedLang === "es") setLang(savedLang);
+    if (savedLang === "en" || savedLang === "es") {
+      setLang(savedLang);
+    } else if (navigator.language?.toLowerCase().startsWith("es")) {
+      setLang("es");
+    }
 
     async function boot() {
       const session = await refreshUserAndProfile();
@@ -739,6 +744,33 @@ export default function HomeClient() {
     } catch {
       setError("Could not start Pro checkout. Please try again.");
       setProCheckoutLoading(false);
+    }
+  }
+
+  async function startMarketStudyCheckout() {
+    setMarketStudyCheckoutLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idea: idea.trim(),
+          lang,
+          email: email.trim() || undefined,
+          freeResult: result ? { overall: result.overall, ideaName: result.ideaName } : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setError(data.error || "Checkout failed. Please try again.");
+        setMarketStudyCheckoutLoading(false);
+      }
+    } catch {
+      setError("Could not start checkout. Please try again.");
+      setMarketStudyCheckoutLoading(false);
     }
   }
 
@@ -1221,32 +1253,7 @@ export default function HomeClient() {
                 </p>
                 <button
                   disabled={marketStudyCheckoutLoading}
-                  onClick={async () => {
-                    setMarketStudyCheckoutLoading(true);
-                    setError("");
-                    try {
-                      const res = await fetch("/api/checkout", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          idea: idea.trim(),
-                          lang,
-                          email: email.trim() || undefined,
-                          freeResult: result ? { overall: result.overall, ideaName: result.ideaName } : undefined,
-                        }),
-                      });
-                      const data = await res.json();
-                      if (data.url) {
-                        window.location.href = data.url;
-                      } else {
-                        setError(data.error || "Checkout failed. Please try again.");
-                        setMarketStudyCheckoutLoading(false);
-                      }
-                    } catch {
-                      setError("Could not start checkout. Please try again.");
-                      setMarketStudyCheckoutLoading(false);
-                    }
-                  }}
+                  onClick={() => setShowMarketStudyPreview(true)}
                   className="px-8 py-4 bg-[var(--electric)] hover:bg-[var(--electric-dark)] disabled:opacity-60 text-white font-semibold rounded-xl transition-all cursor-pointer glow-pulse text-lg"
                 >
                   {marketStudyCheckoutLoading ? (
@@ -1255,7 +1262,7 @@ export default function HomeClient() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                       </svg>
-                      Redirecting to checkout...
+                      {lang === "es" ? "Redirigiendo al pago..." : "Redirecting to checkout..."}
                     </span>
                   ) : (
                     s.upsellButton
@@ -1299,7 +1306,8 @@ export default function HomeClient() {
 
           {/* Social proof / stats */}
           {!result && (
-            <div className="mt-16 grid grid-cols-3 gap-4 text-center">
+            <div className="mt-16 space-y-5 text-center">
+              <div className="grid grid-cols-3 gap-4">
               {[
                 { num: s.statFree, label: s.statFreeLabel },
                 { num: s.statSpeed, label: s.statSpeedLabel },
@@ -1312,6 +1320,15 @@ export default function HomeClient() {
                   </p>
                 </div>
               ))}
+              </div>
+              <div className="mx-auto max-w-xl rounded-2xl border border-white/10 bg-[var(--surface)]/70 px-4 py-3">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  {lang === "es" ? "Privado por defecto." : "Private by default."} <span className="text-[var(--text-secondary)]">{lang === "es" ? "No vendemos, publicamos ni usamos tus ideas para construir negocios competidores." : "We don’t sell, publish, or use your ideas to build competing businesses."}</span>
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  {lang === "es" ? "Las evaluaciones pueden guardarse solo para mostrar resultados, historial y mejorar el producto." : "Evaluations may be stored only to provide your results, history, and improve the product."}
+                </p>
+              </div>
             </div>
           )}
           </div>
@@ -1379,6 +1396,88 @@ export default function HomeClient() {
           mode={authModalMode}
           lang={lang}
         />
+      )}
+
+      {/* Market Study Preview Modal */}
+      {showMarketStudyPreview && result && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowMarketStudyPreview(false); }}
+        >
+          <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-[var(--electric)]/30 bg-[var(--surface)] shadow-2xl shadow-[var(--electric)]/10 animate-fade-up">
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--electric-light)]">
+                  {lang === "es" ? "Antes de pagar" : "Before checkout"}
+                </p>
+                <h3 className="mt-2 text-2xl font-bold text-[var(--text-primary)]">
+                  {lang === "es" ? "Qué incluye el Market Study" : "What the Market Study includes"}
+                </h3>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                  {lang === "es" ? "Un reporte más profundo para decidir si avanzar, pausar o ajustar esta idea antes de invertir más tiempo o dinero." : "A deeper report to help you decide whether to move forward, pause, or adjust this idea before investing more time or money."}
+                </p>
+              </div>
+              <button onClick={() => setShowMarketStudyPreview(false)} className="text-xl leading-none text-[var(--text-muted)] transition-colors hover:text-white cursor-pointer">✕</button>
+            </div>
+
+            <div className="grid gap-4 px-6 py-5 sm:grid-cols-[1fr_0.9fr]">
+              <div className="space-y-3">
+                {[
+                  lang === "es" ? "market overview / panorama del mercado" : "market overview",
+                  lang === "es" ? "target customer / cliente objetivo" : "target customer",
+                  lang === "es" ? "competitors / competidores" : "competitors",
+                  lang === "es" ? "pricing angle / estrategia de precio" : "pricing angle",
+                  lang === "es" ? "risks / riesgos" : "risks",
+                  lang === "es" ? "go/no-go recommendation / recomendación de avanzar o pausar" : "go/no-go recommendation",
+                  lang === "es" ? "next steps / siguientes pasos" : "next steps",
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-[var(--text-secondary)]">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--electric)]/15 text-xs text-[var(--electric-light)]">✓</span>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                  {lang === "es" ? "Preview parcial" : "Partial preview"}
+                </p>
+                <div className="space-y-3 text-sm">
+                  <div className="rounded-xl bg-[var(--surface-light)] p-3">
+                    <p className="font-semibold text-[var(--text-primary)]">{lang === "es" ? "1. Señal inicial" : "1. Initial signal"}</p>
+                    <p className="mt-1 text-[var(--text-muted)]">{result.ideaName}: {result.overall.toFixed(1)}/10</p>
+                  </div>
+                  <div className="rounded-xl bg-[var(--surface-light)] p-3">
+                    <p className="font-semibold text-[var(--text-primary)]">{lang === "es" ? "2. Riesgo principal" : "2. Main risk"}</p>
+                    <p className="mt-1 text-[var(--text-muted)]">{result.risks[0] || (lang === "es" ? "Validar demanda real." : "Validate real demand.")}</p>
+                  </div>
+                  <div className="relative overflow-hidden rounded-xl bg-[var(--surface-light)] p-3">
+                    <div className="blur-sm select-none">
+                      <p className="font-semibold text-[var(--text-primary)]">{lang === "es" ? "3. Competidores + estrategia" : "3. Competitors + strategy"}</p>
+                      <p className="mt-1 text-[var(--text-muted)]">•••••• ••••• ••••••• ••••• ••••••••• •••••</p>
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/35 text-xs font-bold text-white">
+                      {lang === "es" ? "Se desbloquea con el estudio" : "Unlocked in the full study"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-white/10 px-6 py-5">
+              <p className="mb-4 text-xs text-[var(--text-muted)]">
+                {lang === "es" ? "Nota: este reporte es una herramienta de apoyo para decidir. No es asesoría legal, financiera ni de inversión, y no garantiza rentabilidad, demanda o éxito comercial." : "Note: this report is a decision-support tool. It is not financial, legal, investment, or professional advice, and it does not guarantee profitability, demand, or business success."}
+              </p>
+              <button
+                onClick={startMarketStudyCheckout}
+                disabled={marketStudyCheckoutLoading}
+                className="w-full rounded-xl bg-[var(--electric)] px-6 py-4 text-base font-semibold text-white transition-all hover:bg-[var(--electric-dark)] disabled:opacity-60 cursor-pointer glow-pulse"
+              >
+                {marketStudyCheckoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "Continuar al pago — $49" : "Continue to checkout — $49")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Share Modal */}
@@ -1488,16 +1587,23 @@ export default function HomeClient() {
       {/* Footer */}
       <footer className="py-8 px-6 border-t border-white/5">
         <div className="mx-auto max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[var(--text-muted)]">
-          <a
-            href="https://ai-norte.com"
-            className="flex items-center gap-1.5 hover:text-[var(--electric-light)] transition-colors"
-            target="_blank"
-            rel="noopener"
-          >
-            <span>{s.footerCopy}</span>
-            <img src="/ainorte-logo.svg" alt="AI Norte" className="h-4 w-4" />
-            <span className="text-[var(--electric-light)]">AI Norte</span>
-          </a>
+          <div className="flex flex-col items-center gap-2 sm:items-start">
+            <a
+              href="https://ai-norte.com"
+              className="flex items-center gap-1.5 hover:text-[var(--electric-light)] transition-colors"
+              target="_blank"
+              rel="noopener"
+            >
+              <span>{s.footerCopy}</span>
+              <img src="/ainorte-logo.svg" alt="AI Norte" className="h-4 w-4" />
+              <span className="text-[var(--electric-light)]">AI Norte</span>
+            </a>
+            <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs sm:justify-start">
+              <a href="/privacy" className="hover:text-[var(--electric-light)] transition-colors">Privacy</a>
+              <a href="/terms" className="hover:text-[var(--electric-light)] transition-colors">Terms</a>
+              <a href="mailto:tars@ai-norte.com" className="hover:text-[var(--electric-light)] transition-colors">Contact</a>
+            </nav>
+          </div>
           <span>{s.footerTagline}</span>
         </div>
       </footer>

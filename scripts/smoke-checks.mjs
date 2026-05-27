@@ -13,6 +13,20 @@ const strategicPlanRoute = readFileSync(new URL('../src/app/api/strategic-plan/r
 const shareCardRoute = readFileSync(new URL('../src/app/api/share-card/route.tsx', import.meta.url), 'utf8');
 const historyPage = readFileSync(new URL('../src/app/history/page.tsx', import.meta.url), 'utf8');
 const dashboardPage = readFileSync(new URL('../src/app/dashboard/page.tsx', import.meta.url), 'utf8');
+const supabaseClient = readFileSync(new URL('../src/lib/supabase/client.ts', import.meta.url), 'utf8');
+const privacyPage = readFileSync(new URL('../src/app/privacy/page.tsx', import.meta.url), 'utf8');
+const termsPage = readFileSync(new URL('../src/app/terms/page.tsx', import.meta.url), 'utf8');
+
+assert(home.includes('Private by default') && home.includes('Privado por defecto'), 'Home should show compact privacy reassurance under the free/no-card stats in both languages.');
+assert(home.includes('We don’t sell, publish, or use your ideas to build competing businesses') && home.includes('No vendemos, publicamos ni usamos tus ideas para construir negocios competidores'), 'Home privacy copy should explicitly address idea theft concerns.');
+assert(home.includes('navigator.language') && home.includes('localStorage.getItem("lang")'), 'Home should auto-detect browser Spanish while preserving saved language preference.');
+assert(home.includes('showMarketStudyPreview') && home.includes('Continue to checkout — $49') && home.includes('Continuar al pago — $49'), 'Market Study CTA should open an explanatory preview before Stripe checkout.');
+assert(home.includes('market overview') && home.includes('go/no-go recommendation') && home.includes('blur-sm'), 'Market Study preview should explain included sections and show locked/blurred value before payment.');
+assert(home.includes('Privacy') && home.includes('Terms') && home.includes('mailto:tars@ai-norte.com'), 'Footer should link to privacy, terms, and contact without adding an About section to ratemyidea.');
+assert(privacyPage.includes('We do not sell your ideas') && privacyPage.includes('No vendemos tus ideas'), 'Privacy page should include the agreed idea-protection promise in EN and ES.');
+assert(termsPage.includes('not financial, legal, investment, or professional advice') && termsPage.includes('No garantiza rentabilidad'), 'Terms page should include compact liability/disclaimer language.');
+assert(authModal.includes('resetPasswordForEmail') && authModal.includes('Password reset email sent') && authModal.includes('Te enviamos un correo para restablecer tu contraseña'), 'Auth modal should include password reset flow with localized success copy.');
+assert(supabaseClient.includes('isValidSupabaseUrl') && supabaseClient.includes('try {') && supabaseClient.includes('return false'), 'Supabase browser client should ignore invalid placeholder URLs instead of crashing local runtime.');
 
 assert(authModal.includes('emailRedirectTo'), 'Supabase signup should set emailRedirectTo so production confirmations do not go to localhost.');
 assert(authModal.includes('window.location.origin'), 'Supabase signup redirect should use the current deployed origin.');

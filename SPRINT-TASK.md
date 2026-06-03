@@ -6,7 +6,7 @@
 > - `/Users/tars/Projects/ai-norte/01-direccion/tasks.md`
 > - `/Users/tars/Projects/ai-norte/01-direccion/ratemyidea-sales-tracking.md`
 >
-> As of 2026-05-27, the repo also contains local verified commits pending Phil push/deploy for controlled-sale feedback fixes and the Market Study hybrid AI Norte consulting-style report experience.
+> As of 2026-06-03, controlled-sale feedback fixes and the Market Study hybrid AI Norte consulting-style report experience are part of the current repo state on `origin/main`. This file remains historical only; use the AI Norte direction docs for current product state.
 
 ## PRODUCT SPEC
 

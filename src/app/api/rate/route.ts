@@ -9,6 +9,9 @@ const BEEHIIV_API_KEY = process.env.BEEHIIV_API_KEY;
 const BEEHIIV_PUBLICATION_ID = process.env.BEEHIIV_PUBLICATION_ID;
 const FREE_LIMIT = 2; // Reverted to 2 - TARS 2026-04-29
 const ANTHROPIC_TIMEOUT_MS = 25000;
+const FREE_DAILY_GLOBAL_LIMIT = parsePositiveIntegerEnv(process.env.FREE_DAILY_GLOBAL_LIMIT);
+const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY;
+const TURNSTILE_AFTER_FREE_EVALS = parsePositiveIntegerEnv(process.env.TURNSTILE_AFTER_FREE_EVALS) ?? 1;
 
 type AnthropicMessageResponse = {
   content?: Array<{ text?: string }>;
@@ -103,10 +106,55 @@ function detectIdeaLanguage(text: string): "en" | "es" {
   return hasSpanishChars || signalCount >= 2 ? "es" : "en";
 }
 
+function parsePositiveIntegerEnv(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function isSuspiciousIdea(idea: string): boolean {
+  const trimmed = idea.trim();
+  const normalized = trimmed.toLowerCase();
+  const urls = normalized.match(/https?:\/\/|www\./g) ?? [];
+  const repeatedCharacterRun = /(.)\1{14,}/.test(normalized);
+  const words = normalized.match(/[a-záéíóúñ0-9]{3,}/gi) ?? [];
+  const wordCounts = new Map<string, number>();
+
+  for (const word of words) {
+    const count = (wordCounts.get(word) ?? 0) + 1;
+    if (count >= 18 && words.length <= 35) return true;
+    wordCounts.set(word, count);
+  }
+
+  return urls.length >= 3 || repeatedCharacterRun || trimmed.length > 0 && words.length <= 2;
+}
+
+async function verifyTurnstileToken(token: string | undefined, ip: string): Promise<boolean> {
+  if (!TURNSTILE_SECRET_KEY) return true;
+  if (!token || typeof token !== "string") return false;
+
+  try {
+    const formData = new FormData();
+    formData.append("secret", TURNSTILE_SECRET_KEY);
+    formData.append("response", token);
+    if (ip !== "unknown") formData.append("remoteip", ip);
+
+    const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await response.json().catch(() => null) as { success?: boolean } | null;
+    return data?.success === true;
+  } catch (error) {
+    console.error("Turnstile verification failed:", error);
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { idea, email, lang, authToken } = body;
+    const { idea, email, lang, authToken, turnstileToken } = body;
 
     if (!idea || typeof idea !== "string" || idea.trim().length < 10) {
       return NextResponse.json(
@@ -118,6 +166,16 @@ export async function POST(request: NextRequest) {
     if (idea.length > 1000) {
       return NextResponse.json(
         { error: "Idea description is too long (max 1000 characters)." },
+        { status: 400 }
+      );
+    }
+
+    if (isSuspiciousIdea(idea)) {
+      return NextResponse.json(
+        {
+          error: "abuse_check_failed",
+          message: "Please describe a real business idea before requesting an AI evaluation.",
+        },
         { status: 400 }
       );
     }
@@ -166,6 +224,31 @@ export async function POST(request: NextRequest) {
       const today = new Date();
       today.setUTCHours(0, 0, 0, 0);
 
+      if (FREE_DAILY_GLOBAL_LIMIT) {
+        const { count: globalFreeCount, error: globalFreeError } = await supabase
+          .from("evaluations")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", today.toISOString());
+
+        if (globalFreeError) {
+          console.error("Global free usage lookup error:", globalFreeError.message);
+          return NextResponse.json(
+            { error: "Rate limit service unavailable." },
+            { status: 503 }
+          );
+        }
+
+        if ((globalFreeCount ?? 0) >= FREE_DAILY_GLOBAL_LIMIT) {
+          return NextResponse.json(
+            {
+              error: "cost_guardrail",
+              message: "Free evaluations are temporarily limited today. Try again later or upgrade to Pro.",
+            },
+            { status: 429 }
+          );
+        }
+      }
+
       const usageQuery = supabase
         .from("evaluations")
         .select("id")
@@ -186,6 +269,19 @@ export async function POST(request: NextRequest) {
       const usedCount = usageRows?.length ?? 0;
       freeEvaluationsUsed = Math.min(usedCount, FREE_LIMIT);
       freeEvaluationsLeft = Math.max(FREE_LIMIT - usedCount, 0);
+
+      if (!userId && TURNSTILE_SECRET_KEY && usedCount >= TURNSTILE_AFTER_FREE_EVALS) {
+        const turnstileOk = await verifyTurnstileToken(turnstileToken, ip);
+        if (!turnstileOk) {
+          return NextResponse.json(
+            {
+              error: "turnstile_required",
+              message: "Please complete the anti-abuse check before requesting another free evaluation.",
+            },
+            { status: 403 }
+          );
+        }
+      }
 
       if (usedCount >= FREE_LIMIT) {
         if (!userId) {

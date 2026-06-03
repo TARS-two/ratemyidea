@@ -93,6 +93,11 @@ assert(rateRoute.includes('consume_extra_credit'), '/api/rate should consume ext
 assert(rateRoute.includes('extraCreditConsumed'), '/api/rate should track whether the current evaluation used an extra credit for accurate response metadata.');
 assert(rateRoute.includes('Promise.race') && rateRoute.includes('ANTHROPIC_TIMEOUT_MS'), '/api/rate should bound Anthropic calls with a timeout to control cost and stuck requests.');
 assert(rateSearch.includes('AbortController') && rateSearch.includes('SERPER_TIMEOUT_MS'), 'Serper search should have a request timeout so research failures do not hang evaluations.');
+assert(rateRoute.includes('FREE_DAILY_GLOBAL_LIMIT') && rateRoute.includes('{ count: "exact", head: true }') && rateRoute.includes('cost_guardrail'), '/api/rate should have an env-based global free daily cap before spending on search/LLM calls.');
+assert(rateRoute.includes('isSuspiciousIdea') && rateRoute.includes('abuse_check_failed'), '/api/rate should reject obvious bot/spam idea payloads before spending on search/LLM calls.');
+assert(rateRoute.includes('TURNSTILE_SECRET_KEY') && rateRoute.includes('challenges.cloudflare.com/turnstile/v0/siteverify') && rateRoute.includes('turnstile_required'), '/api/rate should support conditional Cloudflare Turnstile verification for suspicious/over-threshold anonymous users.');
+assert(home.includes('NEXT_PUBLIC_TURNSTILE_SITE_KEY') && home.includes('turnstileToken') && home.includes('https://challenges.cloudflare.com/turnstile/v0/api.js'), 'Home should render and submit a Cloudflare Turnstile token when bot protection is configured.');
+assert(rateRoute.indexOf('isSuspiciousIdea') < rateRoute.indexOf('const searchQueries'), 'Abuse checks must run before web research starts.');
 assert(rateRoute.includes('const { error: saveError } = await supabase') && !rateRoute.includes('.then(({ error })'), '/api/rate must await evaluation persistence before returning so anonymous daily limits and CTA metadata advance reliably.');
 
 const signOutMatch = home.match(/(?:async )?function handleSignOut\(\) \{([\s\S]*?)\n  \}/);

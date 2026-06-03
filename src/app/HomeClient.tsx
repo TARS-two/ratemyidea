@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, FormEvent, useRef } from "react";
+import Script from "next/script";
 import { Lang, t } from "./i18n";
 import AuthModal from "@/components/AuthModal";
 import BenchmarkChart from "@/components/BenchmarkChart";
@@ -9,6 +10,16 @@ import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
 const PENDING_SHARE_CREDIT_KEY = "rmi_pending_share_credit_claim";
+const NEXT_PUBLIC_TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (container: HTMLElement, options: Record<string, unknown>) => string;
+      reset: (widgetId?: string) => void;
+    };
+  }
+}
 
 /* ---------- types ---------- */
 interface Source {
@@ -251,7 +262,10 @@ export default function HomeClient() {
   const [ideaHistory, setIdeaHistory] = useState<HistoryEvaluation[]>([]);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
   const [savedCurrentResultKey, setSavedCurrentResultKey] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
   const resultRef = useRef<HTMLDivElement>(null);
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+  const turnstileWidgetIdRef = useRef<string | null>(null);
 
   const s = t[lang];
   const isCurrentPro = Boolean(userSession?.isPro || userProfile?.is_pro || evaluationMeta?.isPro);
@@ -273,6 +287,25 @@ export default function HomeClient() {
     !isCurrentPro &&
     evaluationMeta.freeEvaluationsLeft === 0
   );
+
+  function renderTurnstile() {
+    if (!NEXT_PUBLIC_TURNSTILE_SITE_KEY || !turnstileContainerRef.current || !window.turnstile || turnstileWidgetIdRef.current) {
+      return;
+    }
+
+    turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+      sitekey: NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+      callback: (token: string) => setTurnstileToken(token),
+      "expired-callback": () => setTurnstileToken(""),
+      "error-callback": () => setTurnstileToken(""),
+    });
+  }
+
+  function resetTurnstile() {
+    if (!turnstileWidgetIdRef.current || !window.turnstile) return;
+    window.turnstile.reset(turnstileWidgetIdRef.current);
+    setTurnstileToken("");
+  }
 
   async function refreshUserAndProfile() {
     if (!supabase) {
@@ -334,6 +367,10 @@ export default function HomeClient() {
     console.error("Error fetching user subscription:", subscriptionError);
     return baseSession;
   }
+
+  useEffect(() => {
+    renderTurnstile();
+  }, []);
 
   async function claimPendingShareCredit(token: string) {
     if (localStorage.getItem(PENDING_SHARE_CREDIT_KEY) !== "true") return;
@@ -562,6 +599,7 @@ export default function HomeClient() {
           email: email.trim() || undefined,
           lang: detectedIdeaLang,
           authToken: userSession?.token,
+          turnstileToken: turnstileToken || undefined,
         }),
       });
 
@@ -613,6 +651,7 @@ export default function HomeClient() {
     } catch (err) {
       setError(getErrorMessage(err, "Something went wrong."));
     } finally {
+      resetTurnstile();
       setLoading(false);
     }
   }
@@ -842,6 +881,13 @@ export default function HomeClient() {
 
   return (
     <div className="min-h-screen grid-bg">
+      {NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+        <Script
+          src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+          strategy="afterInteractive"
+          onLoad={renderTurnstile}
+        />
+      )}
       {/* Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[var(--midnight)]/80 backdrop-blur-xl border-b border-white/5">
         <div className="mx-auto max-w-5xl flex items-center justify-between px-6 py-4">
@@ -1007,6 +1053,12 @@ export default function HomeClient() {
                   className="w-full px-4 py-3 bg-[var(--surface)] border border-white/10 rounded-xl text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--electric)] focus:border-transparent transition-all"
                 />
               </div>
+
+              {NEXT_PUBLIC_TURNSTILE_SITE_KEY && !userSession?.isPro && (
+                <div className="flex justify-center rounded-xl border border-white/10 bg-[var(--surface)]/50 p-3">
+                  <div ref={turnstileContainerRef} />
+                </div>
+              )}
 
               {error && (
                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">

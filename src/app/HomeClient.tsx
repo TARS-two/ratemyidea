@@ -295,6 +295,8 @@ export default function HomeClient() {
 
     turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
       sitekey: NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+      theme: "dark",
+      size: "compact",
       callback: (token: string) => setTurnstileToken(token),
       "expired-callback": () => setTurnstileToken(""),
       "error-callback": () => setTurnstileToken(""),
@@ -1054,12 +1056,6 @@ export default function HomeClient() {
                 />
               </div>
 
-              {NEXT_PUBLIC_TURNSTILE_SITE_KEY && !userSession?.isPro && (
-                <div className="flex justify-center rounded-xl border border-white/10 bg-[var(--surface)]/50 p-3">
-                  <div ref={turnstileContainerRef} />
-                </div>
-              )}
-
               {error && (
                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
                   {error}
@@ -1098,6 +1094,17 @@ export default function HomeClient() {
                   s.submitButton
                 )}
               </button>
+
+              {NEXT_PUBLIC_TURNSTILE_SITE_KEY && !userSession?.isPro && (
+                <div className="flex flex-col items-end gap-1 pt-1">
+                  <div className="scale-90 origin-top-right opacity-85 transition-opacity hover:opacity-100">
+                    <div ref={turnstileContainerRef} />
+                  </div>
+                  <span className="text-[10px] text-[var(--text-muted)]">
+                    Anti-abuse check
+                  </span>
+                </div>
+              )}
             </form>
           )}
 

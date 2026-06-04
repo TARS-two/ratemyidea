@@ -131,6 +131,14 @@ assert(home.includes('pro-result-panel'), 'Pro evaluations should render a premi
 assert(home.includes('Pro analysis unlocked'), 'Pro result panel should clearly announce the upgraded analysis experience.');
 assert(home.includes('Benchmark included') && home.includes('10-step plan ready'), 'Pro result panel should summarize benchmark and next-step plan benefits.');
 assert(home.includes('Pro insight benchmark'), 'Benchmark should be framed as a Pro insight section.');
+assert(home.includes('function getProUpsellCopy'), 'Free result Pro upsell should use score-aware contextual copy instead of static SaaS bullets.');
+assert(home.includes('Make this idea stronger with Pro') && home.includes('Mejorar esta idea con Pro'), 'Free result Pro upsell should frame Pro as improving the current idea.');
+assert(home.includes('This idea scored high. Pro helps you protect the upside') && home.includes('Esta idea salió fuerte. Pro te ayuda a proteger lo bueno'), 'Pro upsell should adapt copy for high-scoring ideas in both languages.');
+assert(home.includes('This idea has potential, but the weak spots matter') && home.includes('Esta idea tiene potencial, pero los puntos débiles importan'), 'Pro upsell should adapt copy for mid-scoring ideas in both languages.');
+assert(home.includes('This idea may need a pivot') && home.includes('Esta idea quizá necesita un giro'), 'Pro upsell should adapt copy for low-scoring ideas in both languages.');
+assert(home.includes('Compare your idea') && home.includes('Compara tu idea') && home.includes('Stress-test the weak spots') && home.includes('Presiona los puntos débiles'), 'Pro upsell should render icon cards for comparison and weak-spot work.');
+assert(home.includes('mini benchmark preview') && home.includes('Unlock Pro analysis') && home.includes('Mejorar con Pro'), 'Pro upsell should include a locked benchmark preview and stronger CTA copy.');
+assert(!home.includes('✓ {lang === "es" ? "Evaluaciones ilimitadas"') && !home.includes('Benchmark vs otras ideas'), 'Free result Pro upsell should not use the old generic feature checklist.');
 assert(rateRoute.includes('basicBenchmark') && rateRoute.includes('Based on the current sample of evaluated ideas'), '/api/rate should attach a lightweight directional benchmark to every basic evaluation.');
 assert(home.includes('result.basicBenchmark') && home.includes('Category signal') && home.includes('Señal de categoría'), 'Free results should render a basic benchmark card inside the main analysis.');
 assert(home.includes('categoryAverage') && home.includes('Your score') && home.includes('Category average'), 'Free benchmark should include a visual your-score vs category-average comparison.');

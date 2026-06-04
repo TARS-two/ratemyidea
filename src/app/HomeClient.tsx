@@ -224,6 +224,90 @@ function benchmarkCopy(value: string, lang: Lang | string) {
   return lang === "es" ? (BENCHMARK_SIGNAL_COPY_ES[value] ?? IMPROVEMENT_LEVER_COPY_ES[value] ?? value) : value;
 }
 
+function getProUpsellCopy(score: number, lang: Lang) {
+  if (score >= 7.5) {
+    return lang === "es"
+      ? {
+          headline: "Tu idea ya tiene una señal fuerte. Ahora hay que protegerla.",
+          body: "Esta idea salió fuerte. Pro te ayuda a proteger lo bueno: compararla, planear ejecución e identificar qué todavía podría romperse.",
+        }
+      : {
+          headline: "Your idea has strong signal. Now protect the upside.",
+          body: "This idea scored high. Pro helps you protect the upside: benchmark it, plan execution, and identify what could still break.",
+        };
+  }
+
+  if (score >= 5) {
+    return lang === "es"
+      ? {
+          headline: "Tu idea ya tiene una señal. Ahora hay que hacerla más fuerte.",
+          body: "Esta idea tiene potencial, pero los puntos débiles importan. Pro te ayuda a mejorarla antes de gastar tiempo o dinero.",
+        }
+      : {
+          headline: "Your idea has signal. Now make it stronger.",
+          body: "This idea has potential, but the weak spots matter. Pro helps you improve the idea before spending time or money.",
+        };
+  }
+
+  return lang === "es"
+    ? {
+        headline: "Esta idea quizá necesita un giro. Pro te ayuda a encontrarlo.",
+        body: "Esta idea quizá necesita un giro. Pro te ayuda a entender qué cambiar y si una versión más fuerte es posible.",
+      }
+    : {
+        headline: "This idea may need a pivot. Pro helps you find it.",
+        body: "This idea may need a pivot. Pro helps you understand what to change and whether a stronger version is possible.",
+      };
+}
+
+function getProUpsellCards(lang: Lang) {
+  return lang === "es"
+    ? [
+        {
+          icon: "🧭",
+          title: "Compara tu idea",
+          body: "Ve cómo se compara tu score contra ideas similares de la misma categoría.",
+        },
+        {
+          icon: "🧪",
+          title: "Presiona los puntos débiles",
+          body: "Detecta qué riesgos están bajando tu score y qué deberías validar primero.",
+        },
+        {
+          icon: "🗂",
+          title: "Guarda tus ideas",
+          body: "Conserva tus evaluaciones, compara versiones y no pierdas tus mejores ideas.",
+        },
+        {
+          icon: "⚡",
+          title: "Convierte análisis en acción",
+          body: "Genera 10 próximos pasos concretos para saber qué hacer esta semana.",
+        },
+      ]
+    : [
+        {
+          icon: "🧭",
+          title: "Compare your idea",
+          body: "See how your score compares against similar ideas in the same category.",
+        },
+        {
+          icon: "🧪",
+          title: "Stress-test the weak spots",
+          body: "Find the exact risks dragging your score down and what to validate first.",
+        },
+        {
+          icon: "🗂",
+          title: "Save and revisit your ideas",
+          body: "Keep your evaluations, compare versions, and avoid losing your best thinking.",
+        },
+        {
+          icon: "⚡",
+          title: "Turn analysis into action",
+          body: "Generate 10 focused next steps so you know what to do this week.",
+        },
+      ];
+}
+
 function BasicBenchmarkCard({
   benchmark,
   userScore,
@@ -1474,27 +1558,77 @@ export default function HomeClient() {
               ) : null}
 
               {/* Pro CTA for free users */}
-              {!isCurrentPro && (
-                <div className="bg-[var(--surface)] border border-[var(--electric)]/20 rounded-2xl p-6 text-center">
-                  <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--electric)]/10 text-2xl">⚡</div>
-                  <h3 className="font-bold mb-1">
-                    {lang === "es" ? "Upgrade a Pro — $9/mes" : "Upgrade to Pro — $9/mo"}
-                  </h3>
-                  <ul className="text-sm text-[var(--text-muted)] space-y-1 mb-4 inline-block text-left">
-                    <li>✓ {lang === "es" ? "Evaluaciones ilimitadas" : "Unlimited evaluations"}</li>
-                    <li>✓ {lang === "es" ? "Historial de ideas" : "Idea history"}</li>
-                    <li>✓ {lang === "es" ? "5 planes de 10 pasos/mes" : "5 ten-step plans/month"}</li>
-                    <li>✓ {lang === "es" ? "Benchmark vs otras ideas" : "Benchmark vs other ideas"}</li>
-                  </ul>
-                  <button
-                    onClick={startProCheckout}
-                    disabled={proCheckoutLoading}
-                    className="mt-4 mx-auto px-5 py-2.5 bg-[var(--electric)] hover:bg-[var(--electric-dark)] disabled:opacity-50 text-white font-semibold rounded-xl transition-all cursor-pointer text-sm block w-fit"
-                  >
-                    {proCheckoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "Activar Pro" : "Get Pro")}
-                  </button>
-                </div>
-              )}
+              {!isCurrentPro && (() => {
+                const upsell = getProUpsellCopy(result.overall, lang);
+                const cards = getProUpsellCards(lang);
+                return (
+                  <section className="relative overflow-hidden rounded-3xl border border-[var(--electric)]/25 bg-gradient-to-br from-[var(--electric)]/15 via-[var(--surface)] to-amber-300/10 p-6 shadow-xl shadow-[var(--electric)]/10">
+                    <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[var(--electric)]/20 blur-3xl" />
+                    <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--electric-light)]">
+                          {lang === "es" ? "Mejorar esta idea con Pro" : "Make this idea stronger with Pro"}
+                        </p>
+                        <h3 className="mt-2 text-2xl font-black leading-tight text-[var(--text-primary)]">
+                          {upsell.headline}
+                        </h3>
+                        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)]">
+                          {upsell.body}
+                        </p>
+
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                          {cards.map((card) => (
+                            <div key={card.title} className="rounded-2xl border border-white/10 bg-black/20 p-4 text-left">
+                              <div className="mb-2 flex items-center gap-2">
+                                <span className="text-xl">{card.icon}</span>
+                                <h4 className="text-sm font-bold text-[var(--text-primary)]">{card.title}</h4>
+                              </div>
+                              <p className="text-xs leading-relaxed text-[var(--text-secondary)]">{card.body}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* mini benchmark preview */}
+                      <div className="relative rounded-2xl border border-amber-300/20 bg-black/25 p-4">
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-transparent via-black/5 to-black/25" />
+                        <div className="relative">
+                          <div className="mb-3 flex items-center justify-between">
+                            <span className="text-xs font-bold uppercase tracking-[0.16em] text-amber-200">
+                              {lang === "es" ? "Benchmark Pro" : "Pro benchmark"}
+                            </span>
+                            <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-bold text-amber-100">
+                              {lang === "es" ? "Bloqueado" : "Locked"}
+                            </span>
+                          </div>
+                          <div className="space-y-2 blur-[1px]">
+                            <div className="h-2 rounded-full bg-[var(--electric)]/80" style={{ width: "82%" }} />
+                            <div className="h-2 rounded-full bg-amber-300/70" style={{ width: "64%" }} />
+                            <div className="mt-4 grid grid-cols-2 gap-2">
+                              <div className="h-16 rounded-xl bg-green-400/10" />
+                              <div className="h-16 rounded-xl bg-amber-300/10" />
+                            </div>
+                          </div>
+                          <p className="mt-4 text-xs leading-relaxed text-[var(--text-secondary)]">
+                            {lang === "es"
+                              ? "Desbloquea comparación por categoría, puntos fuertes/débiles y próximos pasos accionables."
+                              : "Unlock category comparison, stronger/weaker signals, and actionable next steps."}
+                          </p>
+                          <button
+                            onClick={startProCheckout}
+                            disabled={proCheckoutLoading}
+                            className="mt-4 w-full rounded-xl bg-[var(--electric)] px-5 py-3 text-sm font-bold text-white transition-all hover:bg-[var(--electric-dark)] disabled:opacity-50 cursor-pointer"
+                          >
+                            {proCheckoutLoading
+                              ? (lang === "es" ? "Redirigiendo..." : "Redirecting...")
+                              : (lang === "es" ? "Mejorar con Pro" : "Unlock Pro analysis")}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                );
+              })()}
 
               {/* Upsell — Market Study */}
               <div className="bg-gradient-to-r from-[var(--electric)]/20 to-purple-500/20 border border-[var(--electric)]/30 rounded-2xl p-6 text-center">

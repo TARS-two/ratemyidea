@@ -184,6 +184,46 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
+const DIMENSION_LABELS_ES: Record<string, string> = {
+  "Market Demand": "Demanda de mercado",
+  Competition: "Competencia",
+  "Revenue Potential": "Potencial de ingresos",
+  Feasibility: "Viabilidad",
+  Scalability: "Escalabilidad",
+  Differentiation: "Diferenciación",
+};
+
+const BENCHMARK_SIGNAL_COPY_ES: Record<string, string> = {
+  "unclear monetization or service-area assumptions": "monetización o alcance geográfico poco claros",
+  "stronger niche demand when the location is specific": "mejores señales cuando la ubicación está bien definida",
+  "weak differentiation against existing tools": "diferenciación débil frente a herramientas existentes",
+  "clearer value when the buyer and workflow are narrow": "valor más claro cuando el comprador y el flujo son específicos",
+  "crowded channels and unclear acquisition cost": "canales saturados y costo de adquisición poco claro",
+  "stronger demand when the niche has repeat purchase behavior": "mayor demanda cuando el nicho compra de forma recurrente",
+  "limited evidence of willingness to pay": "poca evidencia de disposición a pagar",
+  "stronger traction when the customer segment is specific": "mejor tracción cuando el segmento de cliente es específico",
+  "unclear monetization or differentiation": "monetización o diferenciación poco claras",
+  "stronger signals when the target customer is specific": "mejores señales cuando el cliente objetivo es específico",
+};
+
+const IMPROVEMENT_LEVER_COPY_ES: Record<string, string> = {
+  "Validate demand with 5 target buyers.": "Valida la demanda con 5 compradores objetivo.",
+  "Clarify why buyers would choose this over existing alternatives.": "Aclara por qué alguien elegiría esto frente a alternativas existentes.",
+  "Add concrete pricing and purchase-frequency assumptions.": "Agrega supuestos concretos de precio y frecuencia de compra.",
+  "Reduce the first version to one deliverable you can test this week.": "Reduce la primera versión a un entregable que puedas probar esta semana.",
+  "Identify the repeatable acquisition channel before building more features.": "Identifica un canal repetible de adquisición antes de construir más features.",
+  "Define the exact customer segment.": "Define el segmento exacto de cliente.",
+  "Add pricing and willingness-to-pay assumptions.": "Agrega supuestos de precio y disposición a pagar.",
+};
+
+function benchmarkLabel(value: string, lang: Lang | string) {
+  return lang === "es" ? (DIMENSION_LABELS_ES[value] ?? value) : value;
+}
+
+function benchmarkCopy(value: string, lang: Lang | string) {
+  return lang === "es" ? (BENCHMARK_SIGNAL_COPY_ES[value] ?? IMPROVEMENT_LEVER_COPY_ES[value] ?? value) : value;
+}
+
 function BasicBenchmarkCard({
   benchmark,
   userScore,
@@ -230,16 +270,28 @@ function BasicBenchmarkCard({
       </p>
 
       <div className="mb-5 rounded-xl border border-white/10 bg-black/15 p-4">
-        <div className="mb-3 flex items-center justify-between text-xs text-[var(--text-muted)]">
-          <span>{lang === "es" ? "Tu score" : "Your score"}</span>
-          <span>{lang === "es" ? "Promedio de categoría" : "Category average"}: {categoryAverage?.toFixed(1) ?? "—"}</span>
-        </div>
-        <div className="space-y-2">
-          <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-light)]">
-            <div className="h-full rounded-full bg-[var(--electric)]" style={{ width: `${userWidth}%` }} />
+        <div className="mb-3 grid gap-2 text-xs text-[var(--text-muted)] sm:grid-cols-2">
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-[var(--electric)]" />
+            <span>{lang === "es" ? "Tu score" : "Your score"}: {userScore.toFixed(1)}</span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-light)]">
-            <div className="h-full rounded-full bg-amber-300/70" style={{ width: `${averageWidth}%` }} />
+          <div className="flex items-center gap-2 sm:justify-end">
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-300/80" />
+            <span>{lang === "es" ? "Promedio de esta categoría" : "This category average"}: {categoryAverage?.toFixed(1) ?? "—"}</span>
+          </div>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <div className="mb-1 text-[10px] text-[var(--text-muted)]">{lang === "es" ? "Tu score" : "Your score"}</div>
+            <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-light)]">
+              <div className="h-full rounded-full bg-[var(--electric)]" style={{ width: `${userWidth}%` }} />
+            </div>
+          </div>
+          <div>
+            <div className="mb-1 text-[10px] text-[var(--text-muted)]">{lang === "es" ? "Promedio de categoría" : "Category average"}</div>
+            <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-light)]">
+              <div className="h-full rounded-full bg-amber-300/70" style={{ width: `${averageWidth}%` }} />
+            </div>
           </div>
         </div>
       </div>
@@ -249,10 +301,10 @@ function BasicBenchmarkCard({
           {lang === "es" ? "Señal de categoría" : "Category signal"}
         </p>
         <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
-          <li>• {benchmark.categoryShare}% {lang === "es" ? "de las ideas evaluadas recientes están en esta categoría." : "of recent evaluated ideas are in this category."}</li>
+          <li>• {benchmark.categoryShare}% {lang === "es" ? `de todas las ideas evaluadas están en esta categoría (${benchmark.sampleSize} de ${benchmark.totalSampleSize}).` : `of all evaluated ideas are in this category (${benchmark.sampleSize} of ${benchmark.totalSampleSize}).`}</li>
           <li>• {comparisonCopy}</li>
-          <li>• {lang === "es" ? "Debilidad común" : "Common weakness"}: {benchmark.commonWeakness}</li>
-          <li>• {lang === "es" ? "Fortaleza común" : "Common strength"}: {benchmark.commonStrength}</li>
+          <li>• {lang === "es" ? "Debilidad común" : "Common weakness"}: {benchmarkCopy(benchmark.commonWeakness, lang)}</li>
+          <li>• {lang === "es" ? "Fortaleza común" : "Common strength"}: {benchmarkCopy(benchmark.commonStrength, lang)}</li>
         </ul>
       </div>
 
@@ -472,7 +524,7 @@ export default function HomeClient() {
 
   useEffect(() => {
     renderTurnstile();
-  }, []);
+  }, [userSession?.isPro, result]);
 
   async function claimPendingShareCredit(token: string) {
     if (localStorage.getItem(PENDING_SHARE_CREDIT_KEY) !== "true") return;
@@ -574,11 +626,15 @@ export default function HomeClient() {
     setClaimShareCreditAfterAuth(false);
     localStorage.removeItem("rmi_session");
     localStorage.removeItem(PENDING_SHARE_CREDIT_KEY);
+    turnstileWidgetIdRef.current = null;
+    setTimeout(renderTurnstile, 0);
   }
 
-  async function fetchBenchmark(score: number, category: string) {
+  async function fetchBenchmark(score: number, category: string, categories?: ScoreResult["categories"]) {
     try {
-      const res = await fetch(`/api/benchmark?score=${score}&category=${encodeURIComponent(category)}`);
+      const params = new URLSearchParams({ score: String(score), category });
+      if (categories?.length) params.set("subscores", JSON.stringify(categories.map(({ name, score }) => ({ name, score }))));
+      const res = await fetch(`/api/benchmark?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         if (!data.insufficient) setBenchmark(data);
@@ -640,7 +696,7 @@ export default function HomeClient() {
     if (item.result_json) {
       setResult(item.result_json);
       setEvaluationMeta({ isPro: true, freeEvaluationsUsed: 0, freeEvaluationsLeft: 0 });
-      if (item.result_json.category) void fetchBenchmark(item.result_json.overall, item.result_json.category);
+      if (item.result_json.category) void fetchBenchmark(item.result_json.overall, item.result_json.category, item.result_json.categories);
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     }
   }
@@ -745,7 +801,7 @@ export default function HomeClient() {
       }
 
       // Pro-only benchmark
-      if ((userSession?.isPro || data.isPro) && data.category) fetchBenchmark(data.overall, data.category);
+      if ((userSession?.isPro || data.isPro) && data.category) fetchBenchmark(data.overall, data.category, data.categories);
 
       setTimeout(() => {
         resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1340,35 +1396,7 @@ export default function HomeClient() {
                 </ol>
               </div>
 
-              {/* Sources */}
-              {result.sources && result.sources.length > 0 && (
-                <div className="bg-[var(--surface)] border border-white/10 rounded-2xl p-6">
-                  <h3 className="font-semibold text-[var(--text-secondary)] mb-3">
-                    📚 {s.sources}
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {result.sources.map((source, i) => (
-                      <a
-                        key={i}
-                        href={source.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-light)] border border-white/5 rounded-full text-xs text-[var(--text-secondary)] hover:border-[var(--electric)]/40 hover:text-[var(--electric-light)] transition-all"
-                      >
-                        <img
-                          src={`https://www.google.com/s2/favicons?domain=${source.domain}&sz=16`}
-                          alt=""
-                          className="w-3.5 h-3.5 rounded-sm"
-                        />
-                        <span className="font-medium">{source.domain}</span>
-                        <span className="text-[var(--text-muted)] max-w-[180px] truncate hidden sm:inline">
-                          — {source.title}
-                        </span>
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
+
 
               {/* Benchmark */}
               {isCurrentPro && benchmark && (
@@ -1494,6 +1522,36 @@ export default function HomeClient() {
                   )}
                 </button>
               </div>
+
+              {/* Sources */}
+              {result.sources && result.sources.length > 0 && (
+                <div className="bg-[var(--surface)] border border-white/10 rounded-2xl p-6">
+                  <h3 className="font-semibold text-[var(--text-secondary)] mb-3">
+                    📚 {s.sources}
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {result.sources.map((source, i) => (
+                      <a
+                        key={i}
+                        href={source.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-light)] border border-white/5 rounded-full text-xs text-[var(--text-secondary)] hover:border-[var(--electric)]/40 hover:text-[var(--electric-light)] transition-all"
+                      >
+                        <img
+                          src={`https://www.google.com/s2/favicons?domain=${source.domain}&sz=16`}
+                          alt=""
+                          className="w-3.5 h-3.5 rounded-sm"
+                        />
+                        <span className="font-medium">{source.domain}</span>
+                        <span className="text-[var(--text-muted)] max-w-[180px] truncate hidden sm:inline">
+                          — {source.title}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Share + Try Again */}
               <div className="flex flex-col sm:flex-row gap-3">

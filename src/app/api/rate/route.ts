@@ -20,6 +20,7 @@ type AnthropicMessageResponse = {
 type EvaluationBenchmarkRow = {
   overall_score: number | null;
   result_json?: unknown;
+  category?: string | null;
 };
 
 type BasicBenchmark = {
@@ -187,7 +188,7 @@ async function buildBasicBenchmark(
 
   const { data: rows, error } = await supabase
     .from("evaluations")
-    .select("overall_score, result_json")
+    .select("overall_score, result_json, category")
     .not("overall_score", "is", null)
     .order("created_at", { ascending: false })
     .limit(250);
@@ -199,9 +200,20 @@ async function buildBasicBenchmark(
 
   const benchmarkRows = rows as EvaluationBenchmarkRow[];
   const categoryRows = benchmarkRows.filter((row) => {
-    const resultCategory = (row.result_json as { category?: string } | null)?.category;
+    const resultCategory = row.category ?? (row.result_json as { category?: string } | null)?.category;
     return resultCategory === category;
   });
+  const { count: totalEvaluationCount } = await supabase
+    .from("evaluations")
+    .select("*", { count: "exact", head: true })
+    .not("overall_score", "is", null);
+  const { count: totalCategoryCount } = await supabase
+    .from("evaluations")
+    .select("*", { count: "exact", head: true })
+    .eq("category", category)
+    .not("overall_score", "is", null);
+  const totalSampleSize = totalEvaluationCount ?? benchmarkRows.length;
+  const categorySampleSize = totalCategoryCount ?? categoryRows.length;
   const scores = categoryRows
     .map((row) => Number(row.overall_score))
     .filter((value) => Number.isFinite(value));
@@ -212,10 +224,10 @@ async function buildBasicBenchmark(
 
   return {
     category,
-    categoryShare: Math.round((categoryRows.length / benchmarkRows.length) * 100),
+    categoryShare: Math.round((categorySampleSize / Math.max(totalSampleSize, 1)) * 100),
     categoryAverage,
-    sampleSize: categoryRows.length,
-    totalSampleSize: benchmarkRows.length,
+    sampleSize: categorySampleSize,
+    totalSampleSize,
     isAboveAverage: categoryAverage === null ? null : score >= categoryAverage,
     commonWeakness,
     commonStrength,

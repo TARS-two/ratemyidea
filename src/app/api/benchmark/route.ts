@@ -10,6 +10,18 @@ type EvaluationRow = {
   } | null;
 };
 
+type UserSubscore = { name?: string; score?: number };
+
+function parseUserSubscores(value: string | null): UserSubscore[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 const BENCHMARK_DIMENSIONS = [
   "Market Demand",
   "Competition",
@@ -29,11 +41,17 @@ function getSubscore(row: EvaluationRow, name: string): number | null {
   return typeof score === "number" && Number.isFinite(score) ? score : null;
 }
 
+function getUserSubscore(subscores: UserSubscore[], name: string): number | null {
+  const score = subscores.find((category) => category.name === name)?.score;
+  return typeof score === "number" && Number.isFinite(score) ? score : null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const score = parseFloat(searchParams.get("score") || "0");
     const category = searchParams.get("category") || "Consumer";
+    const userSubscores = parseUserSubscores(searchParams.get("subscores"));
 
     const supabase = createServiceClient();
     if (!supabase) return NextResponse.json({ error: "Service unavailable." }, { status: 503 });
@@ -67,16 +85,21 @@ export async function GET(request: NextRequest) {
     const subscoreAverages = BENCHMARK_DIMENSIONS.map((name) => ({
       name,
       average: average(benchmarkRows.map((row) => getSubscore(row, name)).filter((value): value is number => value !== null)),
+      userScore: getUserSubscore(userSubscores, name),
     }));
-    const availableSubscores = subscoreAverages.filter((item) => item.average !== null) as Array<{ name: string; average: number }>;
-    const strongerThanSimilar = availableSubscores
-      .filter((item) => score >= item.average)
-      .sort((a, b) => a.average - b.average)
+    const availableSubscores = subscoreAverages.filter((item) => item.average !== null && item.userScore !== null) as Array<{ name: string; average: number; userScore: number }>;
+    const subscoreComparisons = availableSubscores.map((item) => ({
+      ...item,
+      difference: Math.round((item.userScore - item.average) * 10) / 10,
+    }));
+    const strongerThanSimilar = subscoreComparisons
+      .filter((item) => item.difference >= 0)
+      .sort((a, b) => b.difference - a.difference)
       .slice(0, 2)
       .map((item) => item.name);
-    const weakerThanSimilar = availableSubscores
-      .filter((item) => score < item.average)
-      .sort((a, b) => b.average - a.average)
+    const weakerThanSimilar = subscoreComparisons
+      .filter((item) => item.difference < 0)
+      .sort((a, b) => a.difference - b.difference)
       .slice(0, 2)
       .map((item) => item.name);
     const improvementLevers = (weakerThanSimilar.length ? weakerThanSimilar : ["target customer", "pricing assumptions", "demand evidence"]).map(

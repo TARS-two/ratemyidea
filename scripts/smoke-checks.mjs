@@ -62,7 +62,7 @@ assert(webhookRoute.includes('sub.metadata?.userId'), 'Stripe webhook should pre
 assert(webhookRoute.includes('checkout.session.completed'), 'Stripe webhook should also unlock Pro from checkout.session.completed as a fallback before subscription metadata arrives.');
 
 assert(!home.includes('if (data.category) fetchBenchmark(data.overall, data.category);'), 'Free evaluations must not fetch benchmark data automatically.');
-assert(home.includes('if ((userSession?.isPro || data.isPro) && data.category) fetchBenchmark(data.overall, data.category);'), 'Benchmark fetch should be gated to current Pro users only.');
+assert(home.includes('if ((userSession?.isPro || data.isPro) && data.category) fetchBenchmark(data.overall, data.category, data.categories);'), 'Benchmark fetch should be gated to current Pro users only and pass user subscores.');
 assert(home.includes('{isCurrentPro && benchmark && ('), 'Benchmark component should render only for Pro users.');
 
 assert(authModal.includes('isAuthenticated?: boolean'), 'AuthModal should know when user is already signed in.');

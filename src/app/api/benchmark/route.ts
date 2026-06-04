@@ -3,6 +3,32 @@ import { createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+type EvaluationRow = {
+  overall_score: number | null;
+  result_json?: {
+    categories?: Array<{ name?: string; score?: number }>;
+  } | null;
+};
+
+const BENCHMARK_DIMENSIONS = [
+  "Market Demand",
+  "Competition",
+  "Revenue Potential",
+  "Feasibility",
+  "Scalability",
+  "Differentiation",
+];
+
+function average(values: number[]): number | null {
+  if (!values.length) return null;
+  return Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 10) / 10;
+}
+
+function getSubscore(row: EvaluationRow, name: string): number | null {
+  const score = row.result_json?.categories?.find((category) => category.name === name)?.score;
+  return typeof score === "number" && Number.isFinite(score) ? score : null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -14,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     const { data: rows } = await supabase
       .from("evaluations")
-      .select("overall_score")
+      .select("overall_score, result_json")
       .eq("category", category)
       .not("overall_score", "is", null);
 
@@ -22,9 +48,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ insufficient: true, totalInCategory: rows?.length || 0 });
     }
 
-    const scores = rows.map((r) => r.overall_score as number);
+    const benchmarkRows = rows as EvaluationRow[];
+    const scores = benchmarkRows.map((r) => Number(r.overall_score)).filter(Number.isFinite);
     const below = scores.filter((s) => s < score).length;
     const percentile = Math.round((below / scores.length) * 100);
+    const topPercent = Math.max(1, 100 - percentile);
 
     // Build distribution buckets (1-2, 2-3, ..., 9-10)
     const distribution = Array.from({ length: 9 }, (_, i) => {
@@ -36,11 +64,48 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    const subscoreAverages = BENCHMARK_DIMENSIONS.map((name) => ({
+      name,
+      average: average(benchmarkRows.map((row) => getSubscore(row, name)).filter((value): value is number => value !== null)),
+    }));
+    const availableSubscores = subscoreAverages.filter((item) => item.average !== null) as Array<{ name: string; average: number }>;
+    const strongerThanSimilar = availableSubscores
+      .filter((item) => score >= item.average)
+      .sort((a, b) => a.average - b.average)
+      .slice(0, 2)
+      .map((item) => item.name);
+    const weakerThanSimilar = availableSubscores
+      .filter((item) => score < item.average)
+      .sort((a, b) => b.average - a.average)
+      .slice(0, 2)
+      .map((item) => item.name);
+    const improvementLevers = (weakerThanSimilar.length ? weakerThanSimilar : ["target customer", "pricing assumptions", "demand evidence"]).map(
+      (name, index) => {
+        const fallback = [
+          "Define the exact customer segment.",
+          "Add pricing and willingness-to-pay assumptions.",
+          "Validate demand with 5 target buyers.",
+        ];
+        if (name === "Market Demand") return "Validate demand with 5 target buyers.";
+        if (name === "Competition" || name === "Differentiation") return "Clarify why buyers would choose this over existing alternatives.";
+        if (name === "Revenue Potential") return "Add concrete pricing and purchase-frequency assumptions.";
+        if (name === "Feasibility") return "Reduce the first version to one deliverable you can test this week.";
+        if (name === "Scalability") return "Identify the repeatable acquisition channel before building more features.";
+        return fallback[index] ?? fallback[0];
+      }
+    ).slice(0, 3);
+
     return NextResponse.json({
       percentile,
+      topPercent,
       totalInCategory: scores.length,
       category,
       distribution,
+      subscoreAverages,
+      strongerThanSimilar,
+      weakerThanSimilar,
+      improvementLevers,
+      disclaimer: "This benchmark is directional, not a scientific ranking. It compares your idea against the current sample of evaluated ideas.",
     });
   } catch (err) {
     console.error("Benchmark error:", err);

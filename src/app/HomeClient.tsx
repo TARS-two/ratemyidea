@@ -40,6 +40,7 @@ interface ScoreResult {
   keywords: string[];
   overall: number;
   category: string;
+  basicBenchmark?: BasicBenchmark;
   badge: Badge;
   categories: {
     name: string;
@@ -56,10 +57,28 @@ interface ScoreResult {
 
 interface BenchmarkData {
   percentile: number;
+  topPercent?: number;
   totalInCategory: number;
   category: string;
   distribution: { range: string; count: number }[];
+  subscoreAverages?: { name: string; average: number | null }[];
+  strongerThanSimilar?: string[];
+  weakerThanSimilar?: string[];
+  improvementLevers?: string[];
+  disclaimer?: string;
   insufficient?: boolean;
+}
+
+interface BasicBenchmark {
+  category: string;
+  categoryShare: number;
+  categoryAverage: number | null;
+  sampleSize: number;
+  totalSampleSize: number;
+  isAboveAverage: boolean | null;
+  commonWeakness: string;
+  commonStrength: string;
+  disclaimer: string;
 }
 
 interface UserSession {
@@ -162,6 +181,87 @@ function ScoreRing({ score }: { score: number }) {
         <span className="text-xs text-[var(--text-muted)]">/ 10</span>
       </div>
     </div>
+  );
+}
+
+function BasicBenchmarkCard({
+  benchmark,
+  userScore,
+  lang,
+}: {
+  benchmark: BasicBenchmark;
+  userScore: number;
+  lang: Lang;
+}) {
+  const categoryAverage = benchmark.categoryAverage;
+  const averageWidth = Math.min(((categoryAverage ?? userScore) / 10) * 100, 100);
+  const userWidth = Math.min((userScore / 10) * 100, 100);
+  const comparisonCopy =
+    benchmark.isAboveAverage === null
+      ? lang === "es"
+        ? "Aún no hay suficiente muestra en esta categoría para afirmar si está arriba o abajo del promedio."
+        : "There is not enough sample depth in this category yet to say whether it is above or below average."
+      : benchmark.isAboveAverage
+        ? lang === "es"
+          ? "Tu score está por encima del promedio actual de la categoría."
+          : "Your score is above the current category average."
+        : lang === "es"
+          ? "Tu score está por debajo del promedio actual de la categoría."
+          : "Your score is below the current category average.";
+
+  return (
+    <section className="rounded-2xl border border-[var(--electric)]/20 bg-[var(--surface)] p-6">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--electric-light)]">
+            {lang === "es" ? "Benchmark básico" : "Basic benchmark"}
+          </p>
+          <h3 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+            {lang === "es" ? "Cómo se compara esta idea" : "How this idea compares"}
+          </h3>
+        </div>
+        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-[var(--text-secondary)]">
+          {benchmark.category}
+        </span>
+      </div>
+
+      <p className="mb-4 text-sm text-[var(--text-secondary)]">
+        {lang === "es" ? "Comparamos tu idea contra ideas similares en:" : "Your idea is being compared against similar ideas in:"} {benchmark.category}
+      </p>
+
+      <div className="mb-5 rounded-xl border border-white/10 bg-black/15 p-4">
+        <div className="mb-3 flex items-center justify-between text-xs text-[var(--text-muted)]">
+          <span>{lang === "es" ? "Tu score" : "Your score"}</span>
+          <span>{lang === "es" ? "Promedio de categoría" : "Category average"}: {categoryAverage?.toFixed(1) ?? "—"}</span>
+        </div>
+        <div className="space-y-2">
+          <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-light)]">
+            <div className="h-full rounded-full bg-[var(--electric)]" style={{ width: `${userWidth}%` }} />
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-light)]">
+            <div className="h-full rounded-full bg-amber-300/70" style={{ width: `${averageWidth}%` }} />
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
+          {lang === "es" ? "Señal de categoría" : "Category signal"}
+        </p>
+        <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
+          <li>• {benchmark.categoryShare}% {lang === "es" ? "de las ideas evaluadas recientes están en esta categoría." : "of recent evaluated ideas are in this category."}</li>
+          <li>• {comparisonCopy}</li>
+          <li>• {lang === "es" ? "Debilidad común" : "Common weakness"}: {benchmark.commonWeakness}</li>
+          <li>• {lang === "es" ? "Fortaleza común" : "Common strength"}: {benchmark.commonStrength}</li>
+        </ul>
+      </div>
+
+      <p className="mt-4 text-xs text-[var(--text-muted)]">
+        {lang === "es"
+          ? "Basado en la muestra actual de ideas evaluadas. Este benchmark es direccional, no un ranking científico."
+          : "Based on the current sample of evaluated ideas. This benchmark is directional, not a scientific ranking."}
+      </p>
+    </section>
   );
 }
 
@@ -1179,6 +1279,10 @@ export default function HomeClient() {
                   <CategoryBar key={cat.name} category={cat} delay={i * 100} />
                 ))}
               </div>
+
+              {result.basicBenchmark && (
+                <BasicBenchmarkCard benchmark={result.basicBenchmark} userScore={result.overall} lang={lang} />
+              )}
 
               {/* Strengths & Risks */}
               <div className="grid sm:grid-cols-2 gap-4">

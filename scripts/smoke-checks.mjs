@@ -9,6 +9,8 @@ const webhookRoute = readFileSync(new URL('../src/app/api/stripe/webhook/route.t
 const confirmRoute = readFileSync(new URL('../src/app/api/stripe/confirm/route.ts', import.meta.url), 'utf8');
 const shareCreditRoute = readFileSync(new URL('../src/app/api/share-credit/route.ts', import.meta.url), 'utf8');
 const rateRoute = readFileSync(new URL('../src/app/api/rate/route.ts', import.meta.url), 'utf8');
+const benchmarkRoute = readFileSync(new URL('../src/app/api/benchmark/route.ts', import.meta.url), 'utf8');
+const benchmarkChart = readFileSync(new URL('../src/components/BenchmarkChart.tsx', import.meta.url), 'utf8');
 const saveCurrentRoute = readFileSync(new URL('../src/app/api/history/save-current/route.ts', import.meta.url), 'utf8');
 const rateSearch = readFileSync(new URL('../src/app/api/rate/search.ts', import.meta.url), 'utf8');
 const strategicPlanRoute = readFileSync(new URL('../src/app/api/strategic-plan/route.ts', import.meta.url), 'utf8');
@@ -129,6 +131,12 @@ assert(home.includes('pro-result-panel'), 'Pro evaluations should render a premi
 assert(home.includes('Pro analysis unlocked'), 'Pro result panel should clearly announce the upgraded analysis experience.');
 assert(home.includes('Benchmark included') && home.includes('10-step plan ready'), 'Pro result panel should summarize benchmark and next-step plan benefits.');
 assert(home.includes('Pro insight benchmark'), 'Benchmark should be framed as a Pro insight section.');
+assert(rateRoute.includes('basicBenchmark') && rateRoute.includes('Based on the current sample of evaluated ideas'), '/api/rate should attach a lightweight directional benchmark to every basic evaluation.');
+assert(home.includes('result.basicBenchmark') && home.includes('Category signal') && home.includes('Señal de categoría'), 'Free results should render a basic benchmark card inside the main analysis.');
+assert(home.includes('categoryAverage') && home.includes('Your score') && home.includes('Category average'), 'Free benchmark should include a visual your-score vs category-average comparison.');
+assert(home.includes('This benchmark is directional, not a scientific ranking') && home.includes('muestra actual de ideas evaluadas'), 'Benchmark UI should avoid overpromising and include directional/sample disclaimer copy.');
+assert(benchmarkRoute.includes('subscoreAverages') && benchmarkRoute.includes('improvementLevers') && benchmarkRoute.includes('strongerThanSimilar') && benchmarkRoute.includes('weakerThanSimilar'), 'Pro benchmark API should return richer comparison fields beyond percentile and histogram.');
+assert(benchmarkChart.includes('Percentile badge') && benchmarkChart.includes('sub-score comparison') && benchmarkChart.includes('improvement levers'), 'Pro benchmark component should render percentile, sub-score comparison, and improvement levers.');
 assert(home.includes('Build the 10-step action plan'), 'Generate 10 steps CTA should be more protagonist for Pro users.');
 assert(home.includes('text-center') && home.includes('Benchmark included') && home.includes('10-step plan ready'), 'Pro result summary cards should center their text.');
 assert(home.includes('formatStrategicPlanSteps'), 'Generated 10-step plans should be parsed into structured cards instead of rendered as plain text.');

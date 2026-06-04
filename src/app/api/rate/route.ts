@@ -17,6 +17,23 @@ type AnthropicMessageResponse = {
   content?: Array<{ text?: string }>;
 };
 
+type EvaluationBenchmarkRow = {
+  overall_score: number | null;
+  result_json?: unknown;
+};
+
+type BasicBenchmark = {
+  category: string;
+  categoryShare: number;
+  categoryAverage: number | null;
+  sampleSize: number;
+  totalSampleSize: number;
+  isAboveAverage: boolean | null;
+  commonWeakness: string;
+  commonStrength: string;
+  disclaimer: string;
+};
+
 async function fetchAnthropicWithTimeout(body: unknown): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), ANTHROPIC_TIMEOUT_MS);
@@ -127,6 +144,83 @@ function isSuspiciousIdea(idea: string): boolean {
   }
 
   return urls.length >= 3 || repeatedCharacterRun || trimmed.length > 0 && words.length <= 2;
+}
+
+function pickCategoryPattern(category: string): { commonWeakness: string; commonStrength: string } {
+  const normalized = category.toLowerCase();
+  if (normalized.includes("local") || normalized.includes("service")) {
+    return {
+      commonWeakness: "unclear monetization or service-area assumptions",
+      commonStrength: "stronger niche demand when the location is specific",
+    };
+  }
+  if (normalized.includes("saas") || normalized.includes("software") || normalized.includes("b2b")) {
+    return {
+      commonWeakness: "weak differentiation against existing tools",
+      commonStrength: "clearer value when the buyer and workflow are narrow",
+    };
+  }
+  if (normalized.includes("ecommerce") || normalized.includes("consumer")) {
+    return {
+      commonWeakness: "crowded channels and unclear acquisition cost",
+      commonStrength: "stronger demand when the niche has repeat purchase behavior",
+    };
+  }
+  if (normalized.includes("wellness") || normalized.includes("health")) {
+    return {
+      commonWeakness: "limited evidence of willingness to pay",
+      commonStrength: "stronger traction when the customer segment is specific",
+    };
+  }
+  return {
+    commonWeakness: "unclear monetization or differentiation",
+    commonStrength: "stronger signals when the target customer is specific",
+  };
+}
+
+async function buildBasicBenchmark(
+  supabase: ReturnType<typeof createServiceClient>,
+  category: string,
+  score: number
+): Promise<BasicBenchmark | null> {
+  if (!supabase) return null;
+
+  const { data: rows, error } = await supabase
+    .from("evaluations")
+    .select("overall_score, result_json")
+    .not("overall_score", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(250);
+
+  if (error || !rows?.length) {
+    if (error) console.error("Basic benchmark lookup error:", error.message);
+    return null;
+  }
+
+  const benchmarkRows = rows as EvaluationBenchmarkRow[];
+  const categoryRows = benchmarkRows.filter((row) => {
+    const resultCategory = (row.result_json as { category?: string } | null)?.category;
+    return resultCategory === category;
+  });
+  const scores = categoryRows
+    .map((row) => Number(row.overall_score))
+    .filter((value) => Number.isFinite(value));
+  const categoryAverage = scores.length
+    ? Math.round((scores.reduce((sum, value) => sum + value, 0) / scores.length) * 10) / 10
+    : null;
+  const { commonWeakness, commonStrength } = pickCategoryPattern(category);
+
+  return {
+    category,
+    categoryShare: Math.round((categoryRows.length / benchmarkRows.length) * 100),
+    categoryAverage,
+    sampleSize: categoryRows.length,
+    totalSampleSize: benchmarkRows.length,
+    isAboveAverage: categoryAverage === null ? null : score >= categoryAverage,
+    commonWeakness,
+    commonStrength,
+    disclaimer: "Based on the current sample of evaluated ideas. This benchmark is directional, not a scientific ranking.",
+  };
 }
 
 async function verifyTurnstileToken(token: string | undefined, ip: string): Promise<boolean> {
@@ -402,6 +496,7 @@ export async function POST(request: NextRequest) {
     parsed.badge = badge;
     parsed.category = category;
     parsed.sources = sources;
+    parsed.basicBenchmark = await buildBasicBenchmark(supabase, category, parsed.overall);
     parsed.isPro = isPro;
     parsed.freeEvaluationsUsed = freeEvaluationsUsed;
     parsed.freeEvaluationsLeft = freeEvaluationsLeft;

@@ -1564,7 +1564,7 @@ export default function HomeClient() {
                 return (
                   <section className="relative overflow-hidden rounded-3xl border border-[var(--electric)]/25 bg-gradient-to-br from-[var(--electric)]/15 via-[var(--surface)] to-amber-300/10 p-6 shadow-xl shadow-[var(--electric)]/10">
                     <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[var(--electric)]/20 blur-3xl" />
-                    <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+                    <div className="relative grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
                       <div>
                         <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--electric-light)]">
                           {lang === "es" ? "Mejorar esta idea con Pro" : "Make this idea stronger with Pro"}
@@ -1590,7 +1590,7 @@ export default function HomeClient() {
                       </div>
 
                       {/* mini benchmark preview */}
-                      <div className="relative rounded-2xl border border-amber-300/20 bg-black/25 p-4">
+                      <div className="relative self-start rounded-2xl border border-amber-300/20 bg-black/25 p-4">
                         <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-transparent via-black/5 to-black/25" />
                         <div className="relative">
                           <div className="mb-3 flex items-center justify-between">
@@ -1614,10 +1614,13 @@ export default function HomeClient() {
                               ? "Desbloquea comparación por categoría, puntos fuertes/débiles y próximos pasos accionables."
                               : "Unlock category comparison, stronger/weaker signals, and actionable next steps."}
                           </p>
+                          <p className="mt-3 inline-flex rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-xs font-bold text-amber-100">
+                            {lang === "es" ? "$9 USD/mes · cancela cuando quieras" : "$9/mo · cancel anytime"}
+                          </p>
                           <button
                             onClick={startProCheckout}
                             disabled={proCheckoutLoading}
-                            className="mt-4 w-full rounded-xl bg-[var(--electric)] px-5 py-3 text-sm font-bold text-white transition-all hover:bg-[var(--electric-dark)] disabled:opacity-50 cursor-pointer"
+                            className="mt-4 w-full rounded-2xl bg-[var(--electric)] px-6 py-4 text-base font-black text-white shadow-lg shadow-[var(--electric)]/25 transition-all hover:-translate-y-0.5 hover:bg-[var(--electric-dark)] hover:shadow-[0_0_32px_rgba(108,58,255,0.45)] disabled:opacity-50 cursor-pointer"
                           >
                             {proCheckoutLoading
                               ? (lang === "es" ? "Redirigiendo..." : "Redirecting...")

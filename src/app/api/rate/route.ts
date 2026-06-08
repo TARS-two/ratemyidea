@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "node:crypto";
-import { searchWeb, formatSearchContext, formatSourcesForClient } from "./search";
+import { searchWeb, filterSourcesForQuality, formatSearchContext, formatSourcesForClient } from "./search";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getBadge, detectCategory } from "@/lib/badges";
 
@@ -455,8 +455,12 @@ export async function POST(request: NextRequest) {
       seen.add(r.url);
       return true;
     });
-    const searchContext = formatSearchContext(uniqueResults);
-    const sources = formatSourcesForClient(uniqueResults);
+    const qualityResults = filterSourcesForQuality(uniqueResults);
+    if (uniqueResults.length > 0 && qualityResults.length === 0) {
+      console.warn("source_quality_empty", { totalResults: uniqueResults.length });
+    }
+    const searchContext = formatSearchContext(qualityResults);
+    const sources = formatSourcesForClient(qualityResults);
 
     // Step 2: Call Claude
     const aiRes = await fetchAnthropicWithTimeout({

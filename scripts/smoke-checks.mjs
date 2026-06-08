@@ -95,6 +95,14 @@ assert(rateRoute.includes('consume_extra_credit'), '/api/rate should consume ext
 assert(rateRoute.includes('extraCreditConsumed'), '/api/rate should track whether the current evaluation used an extra credit for accurate response metadata.');
 assert(rateRoute.includes('Promise.race') && rateRoute.includes('ANTHROPIC_TIMEOUT_MS'), '/api/rate should bound Anthropic calls with a timeout to control cost and stuck requests.');
 assert(rateSearch.includes('AbortController') && rateSearch.includes('SERPER_TIMEOUT_MS'), 'Serper search should have a request timeout so research failures do not hang evaluations.');
+assert(rateSearch.includes('filterSourcesForQuality') && rateSearch.includes('SOURCE_SPAM_DOMAINS') && rateSearch.includes('SOURCE_FALLBACK_LIMIT'), 'Search module should expose source-quality filtering with spam exclusions and a bounded fallback.');
+assert(rateSearch.includes('qualityTier') && rateSearch.includes('sourceQuality'), 'Search results should carry source quality metadata for LLM grounding and client transparency.');
+assert(rateSearch.includes('sort((a, b) => b.sourceQuality - a.sourceQuality'), 'Source filtering should rank stronger domains/snippets before weak sources.');
+assert(rateRoute.includes('const qualityResults = filterSourcesForQuality(uniqueResults)') && rateRoute.includes('formatSearchContext(qualityResults)'), '/api/rate should feed only quality-filtered sources into the LLM research context.');
+assert(rateRoute.includes('formatSourcesForClient(qualityResults)'), '/api/rate should expose the same quality-filtered source set to users.');
+assert(rateRoute.includes('qualityResults.length === 0') && rateRoute.includes('source_quality_empty'), '/api/rate should log when source filtering removes all research results instead of silently grounding on weak sources.');
+assert(rateRoute.indexOf('filterSourcesForQuality') < rateRoute.indexOf('formatSearchContext'), 'Source filtering must run before building the Claude research context.');
+assert(rateRoute.indexOf('filterSourcesForQuality') < rateRoute.indexOf('fetchAnthropicWithTimeout'), 'Source filtering must happen before spending on the Claude call.');
 assert(rateRoute.includes('FREE_DAILY_GLOBAL_LIMIT') && rateRoute.includes('{ count: "exact", head: true }') && rateRoute.includes('cost_guardrail'), '/api/rate should have an env-based global free daily cap before spending on search/LLM calls.');
 assert(rateRoute.includes('isSuspiciousIdea') && rateRoute.includes('abuse_check_failed'), '/api/rate should reject obvious bot/spam idea payloads before spending on search/LLM calls.');
 assert(rateRoute.includes('TURNSTILE_SECRET_KEY') && rateRoute.includes('challenges.cloudflare.com/turnstile/v0/siteverify') && rateRoute.includes('turnstile_required'), '/api/rate should support conditional Cloudflare Turnstile verification for suspicious/over-threshold anonymous users.');
@@ -138,6 +146,10 @@ assert(home.includes('This idea has potential, but the weak spots matter') && ho
 assert(home.includes('This idea may need a pivot') && home.includes('Esta idea quizá necesita un giro'), 'Pro upsell should adapt copy for low-scoring ideas in both languages.');
 assert(home.includes('Compare your idea') && home.includes('Compara tu idea') && home.includes('Stress-test the weak spots') && home.includes('Presiona los puntos débiles'), 'Pro upsell should render icon cards for comparison and weak-spot work.');
 assert(home.includes('mini benchmark preview') && home.includes('Unlock Pro analysis') && home.includes('Mejorar con Pro'), 'Pro upsell should include a locked benchmark preview and stronger CTA copy.');
+assert(home.includes('$9/mo') && home.includes('$9 USD/mes'), 'Pro upsell should show the monthly Pro price in English and Spanish before checkout.');
+assert(home.includes('lg:grid-cols-[minmax(0,1fr)_22rem]') && home.includes('self-start'), 'Pro upsell side panel should not create a tall empty column on desktop.');
+assert(home.includes('hover:shadow-[0_0_32px_rgba(108,58,255,0.45)]') && home.includes('hover:-translate-y-0.5'), 'Pro CTA should be larger and glow/lift on hover.');
+assert(home.includes('hover:shadow-[0_0_32px_rgba(108,58,255,0.45)]') && marketStudyPreview.includes('hover:shadow-[0_0_32px_rgba(108,58,255,0.45)]'), 'Market Study checkout CTA should share the hover glow treatment.');
 assert(!home.includes('✓ {lang === "es" ? "Evaluaciones ilimitadas"') && !home.includes('Benchmark vs otras ideas'), 'Free result Pro upsell should not use the old generic feature checklist.');
 assert(rateRoute.includes('basicBenchmark') && rateRoute.includes('Based on the current sample of evaluated ideas'), '/api/rate should attach a lightweight directional benchmark to every basic evaluation.');
 assert(home.includes('result.basicBenchmark') && home.includes('Category signal') && home.includes('Señal de categoría'), 'Free results should render a basic benchmark card inside the main analysis.');

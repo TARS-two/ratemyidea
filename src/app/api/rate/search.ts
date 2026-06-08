@@ -1,11 +1,13 @@
 // Web research using Serper.dev Google Search API (2,500 free credits)
 // Falls back gracefully if no API key or credits exhausted
 
-interface SearchResult {
+export interface SearchResult {
   title: string;
   url: string;
   snippet: string;
   domain: string;
+  qualityTier?: "trusted" | "acceptable" | "fallback";
+  sourceQuality?: number;
 }
 
 // Trusted source domains (tier 1 & 2)
@@ -32,6 +34,15 @@ const TRUSTED_DOMAINS = new Set([
   "en.wikipedia.org", "es.wikipedia.org",
 ]);
 
+const SOURCE_SPAM_DOMAINS = new Set([
+  "reddit.com", "quora.com", "medium.com", "pinterest.com", "youtube.com", "tiktok.com",
+  "facebook.com", "instagram.com", "x.com", "twitter.com", "linkedin.com", "substack.com",
+]);
+
+const SOURCE_FALLBACK_LIMIT = 4;
+const SOURCE_CONTEXT_LIMIT = 6;
+const MIN_SNIPPET_LENGTH = 45;
+
 function extractDomain(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -40,15 +51,57 @@ function extractDomain(url: string): string {
   }
 }
 
+function parentDomain(hostname: string): string {
+  const parts = hostname.split(".");
+  return parts.length > 2 ? parts.slice(-2).join(".") : hostname;
+}
+
 function isDomainTrusted(url: string): boolean {
   const hostname = extractDomain(url);
   if (TRUSTED_DOMAINS.has(hostname)) return true;
-  const parts = hostname.split(".");
-  if (parts.length > 2) {
-    const parent = parts.slice(-2).join(".");
-    return TRUSTED_DOMAINS.has(parent);
-  }
-  return false;
+  return TRUSTED_DOMAINS.has(parentDomain(hostname));
+}
+
+function isSourceSpam(domain: string): boolean {
+  return SOURCE_SPAM_DOMAINS.has(domain) || SOURCE_SPAM_DOMAINS.has(parentDomain(domain));
+}
+
+function scoreSourceQuality(result: SearchResult): number {
+  let score = 0;
+  if (isDomainTrusted(result.url)) score += 80;
+  if (result.title.trim().length >= 12) score += 8;
+  if (result.snippet.trim().length >= MIN_SNIPPET_LENGTH) score += 10;
+  if (/\b(2024|2025|2026|market|industry|report|study|survey|data|trends|competitor|pricing)\b/i.test(`${result.title} ${result.snippet}`)) score += 8;
+  if (isSourceSpam(result.domain)) score -= 80;
+  if (!result.url || !result.domain) score -= 50;
+  return score;
+}
+
+export function filterSourcesForQuality(results: SearchResult[]): SearchResult[] {
+  const seen = new Set<string>();
+  const enriched = results
+    .map((result) => {
+      const domain = result.domain || extractDomain(result.url);
+      const normalized: SearchResult = { ...result, domain };
+      const sourceQuality = scoreSourceQuality(normalized);
+      const qualityTier: SearchResult["qualityTier"] = isDomainTrusted(normalized.url)
+        ? "trusted"
+        : sourceQuality >= 18
+          ? "acceptable"
+          : "fallback";
+      return { ...normalized, sourceQuality, qualityTier };
+    })
+    .filter((result) => {
+      if (!result.url || seen.has(result.url)) return false;
+      seen.add(result.url);
+      return !isSourceSpam(result.domain);
+    })
+    .sort((a, b) => b.sourceQuality - a.sourceQuality);
+
+  const strong = enriched.filter((result) => result.qualityTier === "trusted" || result.qualityTier === "acceptable");
+  if (strong.length > 0) return strong.slice(0, SOURCE_CONTEXT_LIMIT);
+
+  return enriched.slice(0, SOURCE_FALLBACK_LIMIT);
 }
 
 const SERPER_API_KEY = process.env.SERPER_API_KEY;
@@ -107,19 +160,14 @@ export function formatSearchContext(results: SearchResult[]): string {
   if (results.length === 0) return "";
 
   const lines = results.map(
-    (r, i) => `[${i + 1}] "${r.title}" — ${r.domain}\n    ${r.snippet}`
+    (r, i) => `[${i + 1}] "${r.title}" — ${r.domain} (${r.qualityTier ?? "source"})\n    ${r.snippet}`
   );
 
-  return `\n\nREAL-WORLD RESEARCH (use these to ground your analysis with facts):\n${lines.join("\n\n")}`;
+  return `\n\nREAL-WORLD RESEARCH (use these quality-filtered sources to ground your analysis with facts; do not overstate weak/fallback sources):\n${lines.join("\n\n")}`;
 }
 
 export function formatSourcesForClient(results: SearchResult[]): { title: string; url: string; domain: string }[] {
-  // Prioritize trusted sources, then fill with others (excluding spam)
-  const SPAM_DOMAINS = new Set(["reddit.com", "quora.com", "medium.com", "pinterest.com", "youtube.com"]);
-  const trusted = results.filter((r) => isDomainTrusted(r.url));
-  const other = results.filter((r) => !isDomainTrusted(r.url) && !SPAM_DOMAINS.has(r.domain));
-  const combined = [...trusted, ...other].slice(0, 6);
-  return combined.map((r) => ({
+  return filterSourcesForQuality(results).slice(0, 6).map((r) => ({
     title: r.title.slice(0, 80),
     url: r.url,
     domain: r.domain,

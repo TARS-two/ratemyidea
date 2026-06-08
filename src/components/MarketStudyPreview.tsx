@@ -228,7 +228,7 @@ export default function MarketStudyPreview({ lang, result, loading, onClose, onC
             <button
               onClick={onCheckout}
               disabled={loading}
-              className="flex w-full items-center justify-center gap-3 rounded-xl bg-[var(--electric)] px-6 py-4 text-base font-semibold text-white transition-all hover:bg-[var(--electric-dark)] disabled:opacity-60 cursor-pointer glow-pulse"
+              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-[var(--electric)] px-7 py-5 text-base font-black text-white shadow-lg shadow-[var(--electric)]/25 transition-all hover:-translate-y-0.5 hover:bg-[var(--electric-dark)] hover:shadow-[0_0_32px_rgba(108,58,255,0.45)] disabled:opacity-60 cursor-pointer glow-pulse"
             >
               <span aria-hidden="true" className="text-lg">🛒</span>
               <span>{loading ? (isEs ? "Abriendo checkout seguro..." : "Opening secure checkout...") : (isEs ? "Comprar Market Study" : "Buy Market Study")}</span>

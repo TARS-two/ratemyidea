@@ -162,7 +162,9 @@ assert(home.includes('This idea may need a pivot') && home.includes('Esta idea q
 assert(home.includes('Compare your idea') && home.includes('Compara tu idea') && home.includes('Stress-test the weak spots') && home.includes('Presiona los puntos débiles'), 'Pro upsell should render icon cards for comparison and weak-spot work.');
 assert(home.includes('mini benchmark preview') && home.includes('Unlock Pro analysis') && home.includes('Mejorar con Pro'), 'Pro upsell should include a locked benchmark preview and stronger CTA copy.');
 assert(home.includes('$9/mo') && home.includes('$9 USD/mes'), 'Pro upsell should show the monthly Pro price in English and Spanish before checkout.');
-assert(home.includes('lg:grid-cols-[minmax(0,1fr)_22rem]') && home.includes('self-start'), 'Pro upsell side panel should not create a tall empty column on desktop.');
+assert(home.includes('xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.95fr)]') && home.includes('lg:grid-cols-1'), 'Pro upsell should avoid a fixed 22rem side column until wide screens, preventing cramped cards and a tall empty right column.');
+assert(home.includes('h-full') && home.includes('flex flex-col'), 'Pro upsell benchmark preview should stretch/distribute vertically when it sits beside the benefit cards.');
+assert(!home.includes('lg:grid-cols-[minmax(0,1fr)_22rem]'), 'Pro upsell should not use the old fixed-width desktop split that caused poor distribution in smoke testing.');
 assert(home.includes('hover:shadow-[0_0_32px_rgba(108,58,255,0.45)]') && home.includes('hover:-translate-y-0.5'), 'Pro CTA should be larger and glow/lift on hover.');
 assert(home.includes('hover:shadow-[0_0_32px_rgba(108,58,255,0.45)]') && marketStudyPreview.includes('hover:shadow-[0_0_32px_rgba(108,58,255,0.45)]'), 'Market Study checkout CTA should share the hover glow treatment.');
 assert(!home.includes('✓ {lang === "es" ? "Evaluaciones ilimitadas"') && !home.includes('Benchmark vs otras ideas'), 'Free result Pro upsell should not use the old generic feature checklist.');

@@ -8,7 +8,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ratemyidea.ai";
 
 export async function POST(request: NextRequest) {
   try {
-    const { idea, lang, email, freeResult } = await request.json();
+    const { idea, market, lang, email, freeResult } = await request.json();
 
     if (!idea || typeof idea !== "string" || idea.trim().length < 10) {
       return NextResponse.json({ error: "Invalid idea" }, { status: 400 });
@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
       allow_promotion_codes: true,
       metadata: {
         idea: idea.trim().slice(0, 500), // Stripe metadata limit
+        market: typeof market === "string" ? market.trim().slice(0, 100) : "",
         lang: lang || "en",
         freeScore: freeResult?.overall?.toString() || "",
         ideaName: freeResult?.ideaName?.slice(0, 100) || "",

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { searchWeb, formatSearchContext, formatSourcesForClient } from "../rate/search";
+import { searchWeb, filterSourcesForQuality, formatSearchContext, formatSourcesForClient, markSourcesUsedInPrompt } from "../rate/search";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY!;
@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     const idea = session.metadata?.idea;
+    const market = session.metadata?.market || "global market";
     const lang = session.metadata?.lang || "en";
     const freeScore = session.metadata?.freeScore ? parseFloat(session.metadata.freeScore) : null;
 
@@ -112,11 +113,11 @@ export async function POST(request: NextRequest) {
 
     // Deep research: more queries, more results
     const searchQueries = [
-      `${idea.slice(0, 80)} market size TAM 2024 2025`,
-      `${idea.slice(0, 80)} competitors landscape analysis`,
-      `${idea.slice(0, 80)} target audience demographics`,
-      `${idea.slice(0, 80)} industry trends growth forecast`,
-      `${idea.slice(0, 80)} pricing models revenue`,
+      `${idea.slice(0, 80)} ${market} market size TAM 2024 2025`,
+      `${idea.slice(0, 80)} ${market} competitors landscape analysis`,
+      `${idea.slice(0, 80)} ${market} target audience demographics`,
+      `${idea.slice(0, 80)} ${market} industry trends growth forecast`,
+      `${idea.slice(0, 80)} ${market} pricing models revenue`,
     ];
 
     const searchResults = await Promise.all(
@@ -129,8 +130,9 @@ export async function POST(request: NextRequest) {
       seen.add(r.url);
       return true;
     });
-    const searchContext = formatSearchContext(uniqueResults);
-    const sources = formatSourcesForClient(uniqueResults);
+    const qualityResults = markSourcesUsedInPrompt(filterSourcesForQuality(uniqueResults));
+    const searchContext = formatSearchContext(qualityResults);
+    const sources = formatSourcesForClient(qualityResults);
 
     // Generate comprehensive study with Claude
     const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
@@ -147,7 +149,7 @@ export async function POST(request: NextRequest) {
         messages: [
           {
             role: "user",
-            content: `${lang === "es" ? "[Respond in Spanish]\n\n" : "[Respond in English]\n\n"}Generate a comprehensive market study for this business idea:\n\n${idea}${freeScore !== null ? `\n\nNote: The initial quick screening scored this idea ${freeScore.toFixed(1)}/10. Your deep research should refine this score. Only deviate significantly if the research strongly justifies it — if so, explain why in the keyInsight field.` : ""}${searchContext}`,
+            content: `${lang === "es" ? "[Respond in Spanish]\n\n" : "[Respond in English]\n\n"}Generate a comprehensive market study for this business idea:\n\n${idea}\n\nMarket/location context: ${market || "general/global market"}.${freeScore !== null ? `\n\nNote: The initial quick screening scored this idea ${freeScore.toFixed(1)}/10. Your deep research should refine this score. Only deviate significantly if the research strongly justifies it — if so, explain why in the keyInsight field.` : ""}${searchContext}`,
           },
         ],
       }),

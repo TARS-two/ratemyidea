@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "node:crypto";
-import { searchWeb, filterSourcesForQuality, formatSearchContext, formatSourcesForClient } from "./search";
+import { searchWeb, filterSourcesForQuality, formatSearchContext, formatSourcesForClient, markSourcesUsedInPrompt } from "./search";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getBadge, detectCategory } from "@/lib/badges";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const BEEHIIV_API_KEY = process.env.BEEHIIV_API_KEY;
 const BEEHIIV_PUBLICATION_ID = process.env.BEEHIIV_PUBLICATION_ID;
-const FREE_LIMIT = 2; // Reverted to 2 - TARS 2026-04-29
+const FREE_LIMIT = 1;
 const ANTHROPIC_TIMEOUT_MS = 25000;
 const FREE_DAILY_GLOBAL_LIMIT = parsePositiveIntegerEnv(process.env.FREE_DAILY_GLOBAL_LIMIT);
 const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY;
@@ -128,6 +128,43 @@ function parsePositiveIntegerEnv(value: string | undefined): number | null {
   if (!value) return null;
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+type MarketContext = {
+  providedMarket: string;
+  detectedMarket: string;
+  searchMarket: string;
+  promptNote: string;
+};
+
+function detectMarketContext(idea: string, market?: string): MarketContext {
+  const cleanedMarket = typeof market === "string" ? market.trim().slice(0, 80) : "";
+  const normalizedIdea = idea.toLowerCase();
+  const locationSignals = [
+    "méxico", "mexico", "latam", "latin america", "usa", "united states", "canada", "spain", "españa",
+    "monterrey", "guadalajara", "cdmx", "mexico city", "online", "global", "remote", "local",
+  ];
+  const detected = locationSignals.find((signal) => normalizedIdea.includes(signal)) || "";
+  const searchMarket = cleanedMarket || detected || "global market";
+  return {
+    providedMarket: cleanedMarket,
+    detectedMarket: detected,
+    searchMarket,
+    promptNote: cleanedMarket
+      ? `Market/location specified by user: ${cleanedMarket}. Use it explicitly when judging demand, competition, pricing, and go-to-market.`
+      : detected
+        ? `Market/location detected from the idea: ${detected}. Use it explicitly when judging demand, competition, pricing, and go-to-market.`
+        : "If no market/location is specified, assume a general/global market and state that assumption clearly so the user understands location-sensitive claims may change.",
+  };
+}
+
+function buildSearchQueries(idea: string, marketContext: MarketContext): string[] {
+  const compactIdea = idea.trim().slice(0, 90);
+  const market = marketContext.searchMarket;
+  return [
+    `${compactIdea} ${market} market size competitors`,
+    `${compactIdea} ${market} industry trends pricing 2024 2025`,
+  ];
 }
 
 function isSuspiciousIdea(idea: string): boolean {
@@ -260,7 +297,7 @@ async function verifyTurnstileToken(token: string | undefined, ip: string): Prom
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { idea, email, lang, authToken, turnstileToken } = body;
+    const { idea, email, lang, authToken, turnstileToken, market } = body;
 
     if (!idea || typeof idea !== "string" || idea.trim().length < 10) {
       return NextResponse.json(
@@ -287,6 +324,7 @@ export async function POST(request: NextRequest) {
     }
 
     const responseLang = lang === "es" || lang === "en" ? lang : detectIdeaLanguage(idea);
+    const marketContext = detectMarketContext(idea, market);
 
     if (!ANTHROPIC_API_KEY) {
       return NextResponse.json({ error: "Service not configured." }, { status: 500 });
@@ -395,7 +433,7 @@ export async function POST(request: NextRequest) {
             {
               error: "limit_reached",
               message:
-                "You have used your 2 free evaluations today. Sign in or upgrade to Pro to continue.",
+                "You have used your free evaluation today. Share your score, buy one more evaluation, or upgrade to Pro.",
             },
             { status: 429 }
           );
@@ -427,7 +465,7 @@ export async function POST(request: NextRequest) {
             {
               error: "limit_reached",
               message:
-                "You have used your 2 free evaluations today. Sign in or upgrade to Pro to continue.",
+                "You have used your free evaluation today. Share your score, buy one more evaluation, or upgrade to Pro.",
             },
             { status: 429 }
           );
@@ -441,10 +479,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 1: Research the idea
-    const searchQueries = [
-      `${idea.trim().slice(0, 100)} market size competitors`,
-      `${idea.trim().slice(0, 100)} industry trends 2024 2025`,
-    ];
+    const searchQueries = buildSearchQueries(idea, marketContext);
     const searchResults = await Promise.all(
       searchQueries.map((q) => searchWeb(q, 5))
     );
@@ -455,7 +490,7 @@ export async function POST(request: NextRequest) {
       seen.add(r.url);
       return true;
     });
-    const qualityResults = filterSourcesForQuality(uniqueResults);
+    const qualityResults = markSourcesUsedInPrompt(filterSourcesForQuality(uniqueResults));
     if (uniqueResults.length > 0 && qualityResults.length === 0) {
       console.warn("source_quality_empty", { totalResults: uniqueResults.length });
     }
@@ -470,7 +505,7 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: "user",
-          content: `${responseLang === "es" ? "[Respond in Spanish]\n\n" : "[Respond in English]\n\n"}Rate this business idea:\n\n${idea.trim()}${searchContext}`,
+          content: `${responseLang === "es" ? "[Respond in Spanish]\n\n" : "[Respond in English]\n\n"}Rate this business idea:\n\n${idea.trim()}\n\nMARKET/LOCATION CONTEXT:\n${marketContext.promptNote}${searchContext}`,
         },
       ],
     });

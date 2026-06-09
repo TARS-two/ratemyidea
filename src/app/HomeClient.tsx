@@ -26,6 +26,11 @@ interface Source {
   title: string;
   url: string;
   domain: string;
+  sourceQuality?: number;
+  qualityTier?: string;
+  provider?: string;
+  query?: string;
+  usedInPrompt?: boolean;
 }
 
 interface Badge {
@@ -475,6 +480,7 @@ function formatStrategicPlanSteps(plan: string) {
 export default function HomeClient() {
   const [lang, setLang] = useState<Lang>("en");
   const [idea, setIdea] = useState("");
+  const [market, setMarket] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ScoreResult | null>(null);
@@ -485,6 +491,7 @@ export default function HomeClient() {
   const [showMarketStudyPreview, setShowMarketStudyPreview] = useState(false);
   const [proCheckoutLoading, setProCheckoutLoading] = useState(false);
   const [marketStudyCheckoutLoading, setMarketStudyCheckoutLoading] = useState(false);
+  const [extraEvalCheckoutLoading, setExtraEvalCheckoutLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"limit" | "upgrade" | "claim-credit" | "default">("default");
   const [userSession, setUserSession] = useState<UserSession | null>(null);
@@ -631,6 +638,32 @@ export default function HomeClient() {
       const params = new URLSearchParams(window.location.search);
       const checkoutSessionId = params.get("session_id");
 
+      if (params.get("extra_eval") === "success" && checkoutSessionId && session?.token) {
+        try {
+          const response = await fetch("/api/stripe/extra-evaluation/confirm", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId: checkoutSessionId, authToken: session.token }),
+          });
+          const data = await response.json();
+          if (response.ok) {
+            setUserProfile(prevProfile => ({
+              is_pro: prevProfile?.is_pro ?? false,
+              free_evaluations_left: data.extraCredits ?? Math.max(prevProfile?.free_evaluations_left ?? 0, 1),
+              last_share_date: prevProfile?.last_share_date ?? null,
+            }));
+            setEvaluationMeta(prevMeta => prevMeta ? { ...prevMeta, freeEvaluationsLeft: data.extraCredits ?? Math.max(prevMeta.freeEvaluationsLeft, 1) } : prevMeta);
+            await refreshUserAndProfile();
+          } else {
+            console.error("Could not confirm extra evaluation checkout:", data.error);
+          }
+        } catch (error) {
+          console.error("Could not confirm extra evaluation checkout:", error);
+        } finally {
+          window.history.replaceState({}, "", window.location.pathname);
+        }
+      }
+
       if (params.get("subscribed") === "true" && checkoutSessionId && session?.token) {
         try {
           const response = await fetch("/api/stripe/confirm", {
@@ -665,6 +698,7 @@ export default function HomeClient() {
     function resetCheckoutLoading() {
       setProCheckoutLoading(false);
       setMarketStudyCheckoutLoading(false);
+      setExtraEvalCheckoutLoading(false);
     }
 
     window.addEventListener("pageshow", resetCheckoutLoading);
@@ -838,6 +872,7 @@ export default function HomeClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           idea: idea.trim(),
+          market: market.trim() || undefined,
           email: email.trim() || undefined,
           lang: detectedIdeaLang,
           authToken: userSession?.token,
@@ -1082,6 +1117,38 @@ export default function HomeClient() {
     }
   }
 
+  async function startExtraEvaluationCheckout() {
+    if (!userSession) {
+      setAuthModalMode("default");
+      setShowAuthModal(true);
+      return;
+    }
+
+    setExtraEvalCheckoutLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/stripe/extra-evaluation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          authToken: userSession.token,
+          email: userSession.email || email.trim() || undefined,
+          lang,
+        }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setError(data.error || "Could not start extra evaluation checkout. Please try again.");
+        setExtraEvalCheckoutLoading(false);
+      }
+    } catch {
+      setError("Could not start extra evaluation checkout. Please try again.");
+      setExtraEvalCheckoutLoading(false);
+    }
+  }
+
   async function startMarketStudyCheckout() {
     setMarketStudyCheckoutLoading(true);
     setError("");
@@ -1091,6 +1158,7 @@ export default function HomeClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           idea: idea.trim(),
+          market: market.trim() || undefined,
           lang,
           email: email.trim() || undefined,
           freeResult: result ? { overall: result.overall, ideaName: result.ideaName } : undefined,
@@ -1112,6 +1180,7 @@ export default function HomeClient() {
   function handleReset() {
     setResult(null);
     setIdea("");
+    setMarket("");
     setEmail("");
     setError("");
     setHideIdea(false);
@@ -1276,6 +1345,28 @@ export default function HomeClient() {
                     {idea.length}/1000
                   </span>
                 </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="market"
+                  className="block text-sm font-medium text-[var(--text-secondary)] mb-2"
+                >
+                  {lang === "es" ? "Mercado / ubicación" : "Market / location"}{" "}
+                  <span className="text-[var(--text-muted)]">{lang === "es" ? "(opcional)" : "(optional)"}</span>
+                </label>
+                <input
+                  id="market"
+                  type="text"
+                  value={market}
+                  onChange={(e) => setMarket(e.target.value)}
+                  placeholder={lang === "es" ? "ej. México, LATAM, Monterrey, online/global" : "e.g. Mexico, LATAM, USA, online/global"}
+                  maxLength={80}
+                  className="w-full px-4 py-3 bg-[var(--surface)] border border-white/10 rounded-xl text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--electric)] focus:border-transparent transition-all"
+                />
+                <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                  {lang === "es" ? "Si lo dejas vacío, asumimos un mercado general y lo diremos en el análisis." : "If you leave it blank, we assume a general market and state that in the analysis."}
+                </p>
               </div>
 
               <div>
@@ -1704,17 +1795,17 @@ export default function HomeClient() {
                   )}
                 </button>
                 <button
-                  onClick={shouldShowFinalFreeCta ? () => startProCheckout() : handleReset}
+                  onClick={shouldShowFinalFreeCta ? () => startExtraEvaluationCheckout() : handleReset}
                   className={`flex-1 py-3 border rounded-xl font-medium transition-all cursor-pointer
                     ${shouldShowFinalFreeCta
                       ? "bg-[var(--electric)] border-[var(--electric)] text-white hover:bg-[var(--electric-dark)]"
                       : "bg-[var(--surface)] border-white/10 text-[var(--text-primary)] hover:border-[var(--electric)]/50"}
                   `}
-                  disabled={proCheckoutLoading}
+                  disabled={extraEvalCheckoutLoading}
                 >
                   <div className="flex items-center justify-center gap-2">
                     {shouldShowFinalFreeCta ? (
-                      <>{proCheckoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "Obtén Pro para evaluaciones ilimitadas" : "Get Pro for unlimited evaluations")}</>
+                      <>{extraEvalCheckoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "Comprar otra evaluación · $1" : "Buy one more evaluation · $1")}</>
                     ) : (
                       <>🔄 {s.rateAnother}</>
                     )}

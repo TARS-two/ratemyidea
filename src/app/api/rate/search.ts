@@ -6,6 +6,9 @@ export interface SearchResult {
   url: string;
   snippet: string;
   domain: string;
+  provider?: "serper" | "perplexity" | "manual";
+  query?: string;
+  usedInPrompt?: boolean;
   qualityTier?: "trusted" | "acceptable" | "fallback";
   sourceQuality?: number;
 }
@@ -143,6 +146,8 @@ export async function searchWeb(query: string, maxResults: number = 8): Promise<
       url: r.link || "",
       snippet: r.snippet || "",
       domain: extractDomain(r.link || ""),
+      provider: "serper",
+      query,
     }));
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
@@ -156,6 +161,10 @@ export async function searchWeb(query: string, maxResults: number = 8): Promise<
   }
 }
 
+export function markSourcesUsedInPrompt(results: SearchResult[]): SearchResult[] {
+  return results.map((r) => ({ ...r, usedInPrompt: true }));
+}
+
 export function formatSearchContext(results: SearchResult[]): string {
   if (results.length === 0) return "";
 
@@ -166,10 +175,15 @@ export function formatSearchContext(results: SearchResult[]): string {
   return `\n\nREAL-WORLD RESEARCH (use these quality-filtered sources to ground your analysis with facts; do not overstate weak/fallback sources):\n${lines.join("\n\n")}`;
 }
 
-export function formatSourcesForClient(results: SearchResult[]): { title: string; url: string; domain: string }[] {
+export function formatSourcesForClient(results: SearchResult[]): { title: string; url: string; domain: string; sourceQuality?: number; qualityTier?: string; provider?: string; query?: string; usedInPrompt?: boolean }[] {
   return filterSourcesForQuality(results).slice(0, 6).map((r) => ({
     title: r.title.slice(0, 80),
     url: r.url,
     domain: r.domain,
+    sourceQuality: r.sourceQuality,
+    qualityTier: r.qualityTier,
+    provider: r.provider,
+    query: r.query,
+    usedInPrompt: r.usedInPrompt,
   }));
 }

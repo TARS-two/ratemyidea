@@ -89,8 +89,8 @@ export default function MarketStudyPreview({ lang, result, loading, onClose, onC
             </h3>
             <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">
               {isEs
-                ? "Consultoría ligera con branding AI Norte: desbloqueamos solo la señal del análisis básico que ya generaste; la investigación profunda se produce después del pago."
-                : "Light consulting report with AI Norte branding: only the already-generated basic analysis signal is unlocked; deep research is produced after payment."}
+                ? "El Market Study hace investigación más profunda sobre tu idea: contexto de mercado, competidores, clientes, riesgos, señales de precio y recomendaciones go-to-market, y lo entrega como reporte descargable de AI Norte."
+                : "The Market Study runs deeper research on your idea: market context, competitors, customer segments, risks, pricing signals, and go-to-market recommendations, then packages it into a downloadable AI Norte report."}
             </p>
           </div>
           <button onClick={onClose} className="text-xl leading-none text-[var(--text-muted)] transition-colors hover:text-white cursor-pointer">✕</button>

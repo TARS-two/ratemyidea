@@ -28,6 +28,19 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+        const purchaseType = session.metadata?.purchaseType;
+        if (session.mode === "payment" && purchaseType === "extra_evaluation" && session.payment_status === "paid") {
+          const paidExtraUserId = typeof session.metadata?.userId === "string" && session.metadata.userId
+            ? session.metadata.userId
+            : null;
+          if (paidExtraUserId) {
+            await supabase.rpc("increment_extra_credit", {
+              target_user_id: paidExtraUserId,
+              credit_token: `paid_extra_${session.id}`,
+            });
+          }
+          break;
+        }
         if (session.mode !== "subscription") break;
 
         const metadataUserId = typeof session.metadata?.userId === "string" && session.metadata.userId

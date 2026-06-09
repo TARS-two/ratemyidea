@@ -21,6 +21,8 @@ const supabaseClient = readFileSync(new URL('../src/lib/supabase/client.ts', imp
 const privacyPage = readFileSync(new URL('../src/app/privacy/page.tsx', import.meta.url), 'utf8');
 const termsPage = readFileSync(new URL('../src/app/terms/page.tsx', import.meta.url), 'utf8');
 const studyPage = readFileSync(new URL('../src/app/study/page.tsx', import.meta.url), 'utf8');
+const extraEvalCheckoutRoute = readFileSync(new URL('../src/app/api/stripe/extra-evaluation/route.ts', import.meta.url), 'utf8');
+const extraEvalConfirmRoute = readFileSync(new URL('../src/app/api/stripe/extra-evaluation/confirm/route.ts', import.meta.url), 'utf8');
 
 assert(home.includes('Private by default') && home.includes('Privado por defecto'), 'Home should show compact privacy reassurance under the free/no-card stats in both languages.');
 assert(home.includes('We don’t sell, publish, or use your ideas to build competing businesses') && home.includes('No vendemos, publicamos ni usamos tus ideas para construir negocios competidores'), 'Home privacy copy should explicitly address idea theft concerns.');
@@ -76,9 +78,9 @@ assert(home.includes('interface EvaluationMeta'), 'Home UI should track evaluati
 assert(home.includes('freeEvaluationsUsed'), 'Result flow should know whether this is the 1st or 2nd free evaluation.');
 assert(home.includes('canClaimShareCredit'), 'Share CTA should show +1 free evaluation only when the user can claim it.');
 assert(home.includes('claimShareCreditAfterAuth'), 'Anonymous share-credit claims should route through auth before granting persistent credit.');
-assert(home.includes('startProCheckout()'), 'After the final free evaluation, the secondary CTA should start Pro checkout instead of showing a disabled daily-limit button.');
-assert(home.includes('Get Pro for unlimited evaluations'), 'English final free-evaluation CTA copy should be explicit.');
-assert(home.includes('Obtén Pro para evaluaciones ilimitadas'), 'Spanish final free-evaluation CTA copy should be explicit.');
+assert(home.includes('startExtraEvaluationCheckout()'), 'After the free evaluation, the secondary CTA should start paid extra-evaluation checkout instead of making Pro the only path.');
+assert(home.includes('Buy one more evaluation'), 'English final free-evaluation CTA copy should offer a simple paid extra evaluation.');
+assert(home.includes('Comprar otra evaluación'), 'Spanish final free-evaluation CTA copy should offer a simple paid extra evaluation.');
 assert(home.includes('+1 free evaluation') && home.includes('+1 evaluación gratis'), 'Share CTA should communicate the +1 evaluation incentive in both languages.');
 assert(home.includes('handlePostShareCreditClaim'), 'Share image should automatically route eligible users into +1 claim after sharing.');
 assert(home.includes('PENDING_SHARE_CREDIT_KEY'), 'Share-credit claim intent should persist through email confirmation redirects.');
@@ -87,6 +89,19 @@ assert(home.includes('claimPendingShareCredit'), 'Home boot should claim pending
 assert(home.includes('localStorage.removeItem(PENDING_SHARE_CREDIT_KEY'), 'Pending share-credit intent should clear after successful claim/signout.');
 assert(!home.includes('Claim +1 free evaluation'), 'Share modal should not render a separate repetitive Claim +1 free evaluation button.');
 assert(shareCreditRoute.includes('granted: true') && shareCreditRoute.includes('granted: false'), 'Share-credit API should tell the UI whether a new credit was actually granted.');
+
+assert(rateRoute.includes('const FREE_LIMIT = 1'), '/api/rate should allow exactly one free basic evaluation before share or paid extra-eval paths.');
+assert(home.includes('startExtraEvaluationCheckout') && home.includes('Buy one more evaluation') && home.includes('Comprar otra evaluación'), 'Daily-limit result actions should offer a simple paid extra evaluation instead of making Pro the only next step.');
+assert(home.includes('extraEvalCheckoutLoading') && home.includes('params.get("extra_eval") === "success"'), 'Home should track paid extra-evaluation checkout separately and confirm it on Stripe return.');
+assert(extraEvalCheckoutRoute.includes('STRIPE_EXTRA_EVAL_PRICE_ID') && extraEvalCheckoutRoute.includes('mode: "payment"') && extraEvalCheckoutRoute.includes('purchaseType: "extra_evaluation"'), 'Extra evaluation checkout route should create a one-time Stripe payment with explicit metadata.');
+assert(extraEvalConfirmRoute.includes('stripe.checkout.sessions.retrieve') && extraEvalConfirmRoute.includes('increment_extra_credit') && extraEvalConfirmRoute.includes('purchaseType') && extraEvalConfirmRoute.includes('extra_evaluation'), 'Extra evaluation confirm route should verify Stripe checkout and increment user extra_credits through the idempotent credit RPC.');
+assert(webhookRoute.includes('purchaseType === "extra_evaluation"') && webhookRoute.includes('increment_extra_credit'), 'Stripe webhook should also grant paid extra evaluation credits as a fallback.');
+assert(home.includes('const [market, setMarket]') && home.includes('Market / location') && home.includes('Mercado / ubicación'), 'Home form should include one optional market/location field without turning the app into a long form.');
+assert(rateRoute.includes('marketContext') && rateRoute.includes('detectMarketContext') && rateRoute.includes('If no market/location is specified'), '/api/rate should explicitly handle market/location assumptions in the prompt.');
+assert(rateRoute.includes('buildSearchQueries') && rateRoute.includes('marketContext.searchMarket'), '/api/rate should use deterministic query planning with detected/provided market context.');
+assert(rateSearch.includes('provider?:') && rateSearch.includes('query?:') && rateSearch.includes('usedInPrompt?:') && rateSearch.includes('provider: "serper"'), 'Search results should preserve source provider/query/usedInPrompt metadata.');
+assert(rateSearch.includes('sourceQuality: r.sourceQuality') && rateSearch.includes('qualityTier: r.qualityTier') && rateSearch.includes('query: r.query') && rateSearch.includes('provider: r.provider'), 'Client sources should retain source quality, tier, provider, and query for observability.');
+assert(marketStudyPreview.includes('deeper research') && marketStudyPreview.includes('investigación más profunda'), 'Market Study preview should explain the deeper research in simple product language.');
 
 assert(rateRoute.includes('sub?.status === "active" || sub?.status === "trialing"'), '/api/rate should treat active and trialing Pro subscriptions consistently with the client and Stripe confirm flow.');
 assert(!rateRoute.includes('countColumn = userId ? "user_id" : "ip_hash"'), '/api/rate must not reset free limits by switching from anonymous IP counting to authenticated user_id-only counting after signup.');
@@ -98,7 +113,7 @@ assert(rateSearch.includes('AbortController') && rateSearch.includes('SERPER_TIM
 assert(rateSearch.includes('filterSourcesForQuality') && rateSearch.includes('SOURCE_SPAM_DOMAINS') && rateSearch.includes('SOURCE_FALLBACK_LIMIT'), 'Search module should expose source-quality filtering with spam exclusions and a bounded fallback.');
 assert(rateSearch.includes('qualityTier') && rateSearch.includes('sourceQuality'), 'Search results should carry source quality metadata for LLM grounding and client transparency.');
 assert(rateSearch.includes('sort((a, b) => b.sourceQuality - a.sourceQuality'), 'Source filtering should rank stronger domains/snippets before weak sources.');
-assert(rateRoute.includes('const qualityResults = filterSourcesForQuality(uniqueResults)') && rateRoute.includes('formatSearchContext(qualityResults)'), '/api/rate should feed only quality-filtered sources into the LLM research context.');
+assert(rateRoute.includes('const qualityResults = markSourcesUsedInPrompt(filterSourcesForQuality(uniqueResults))') && rateRoute.includes('formatSearchContext(qualityResults)'), '/api/rate should feed only quality-filtered sources into the LLM research context and mark what was used.');
 assert(rateRoute.includes('formatSourcesForClient(qualityResults)'), '/api/rate should expose the same quality-filtered source set to users.');
 assert(rateRoute.includes('qualityResults.length === 0') && rateRoute.includes('source_quality_empty'), '/api/rate should log when source filtering removes all research results instead of silently grounding on weak sources.');
 assert(rateRoute.indexOf('filterSourcesForQuality') < rateRoute.indexOf('formatSearchContext'), 'Source filtering must run before building the Claude research context.');

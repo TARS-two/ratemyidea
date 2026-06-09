@@ -119,8 +119,8 @@ export default function AuthModal({ onClose, onSuccess, onUpgrade, isAuthenticat
                 ? "Ya iniciaste sesión, pero alcanzaste tu límite diario. Actualiza a Pro para evaluaciones ilimitadas."
                 : "You're signed in, but you've reached your daily limit. Upgrade to Pro for unlimited evaluations.")
               : (lang === "es"
-                ? "Usaste tus 2 evaluaciones gratuitas de hoy. Inicia sesión o actualiza a Pro para continuar."
-                : "You've used your 2 free evaluations today. Sign in to continue or upgrade to Pro.")}
+                ? "Usaste tu evaluación gratis de hoy. Inicia sesión para reclamar o comprar una evaluación extra."
+                : "You've used your free evaluation today. Sign in to claim or buy an extra evaluation.")}
           </p>
         )}
 

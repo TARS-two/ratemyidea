@@ -97,6 +97,29 @@ export default function MarketStudyPreview({ lang, result, loading, onClose, onC
         </div>
 
         <div className="max-h-[82vh] overflow-y-auto bg-[var(--midnight)] px-4 py-6 md:px-8">
+          <div className="mx-auto mb-5 max-w-3xl rounded-2xl border border-[var(--electric)]/25 bg-[var(--electric)]/10 p-4">
+            <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[var(--electric-light)]">
+              {isEs ? "Qué cambia vs. el análisis básico" : "What changes vs. the basic analysis"}
+            </p>
+            <div className="grid items-center gap-3 text-sm md:grid-cols-[1fr_auto_1fr]">
+              <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+                <p className="font-bold text-[var(--text-primary)]">{isEs ? "Análisis básico" : "Basic analysis"}</p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
+                  {isEs ? "Score, señales principales y riesgos iniciales." : "Score, core signals, and initial risks."}
+                </p>
+              </div>
+              <div className="text-center text-xl text-[var(--electric-light)]">→</div>
+              <div className="rounded-xl border border-amber-300/20 bg-amber-300/10 p-4">
+                <p className="font-bold text-amber-100">
+                  {isEs ? "El Market Study agrega investigación más profunda" : "Market Study adds deeper research"}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-amber-100/80">
+                  {isEs ? "Más contexto de mercado, competencia, audiencia y go-to-market, sin publicar el método interno." : "More market, competitor, audience, and go-to-market context without exposing the internal method."}
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="mx-auto max-w-3xl space-y-6 rounded-[2rem] border border-white/10 bg-black/20 p-5 shadow-inner shadow-black/40 md:p-8">
             <header className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[var(--surface)] via-[var(--surface)] to-[var(--electric)]/15 p-7 text-center">
               <p className="mb-2 text-sm uppercase tracking-wider text-[var(--electric-light)]">Complete Market Study</p>

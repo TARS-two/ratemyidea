@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
 const PENDING_SHARE_CREDIT_KEY = "rmi_pending_share_credit_claim";
+const CHECKOUT_RESULT_KEY = "rmi_checkout_open_result";
 const NEXT_PUBLIC_TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 declare global {
@@ -623,6 +624,50 @@ export default function HomeClient() {
     if (granted) localStorage.removeItem(PENDING_SHARE_CREDIT_KEY);
   }
 
+  function persistCurrentResultForCheckout() {
+    if (!result) return;
+    try {
+      sessionStorage.setItem(CHECKOUT_RESULT_KEY, JSON.stringify({
+        result,
+        idea,
+        market,
+        email,
+        lang,
+        evaluationMeta,
+      }));
+    } catch (error) {
+      console.warn("Could not persist open result before checkout:", error);
+    }
+  }
+
+  function restoreCurrentResultFromCheckout() {
+    try {
+      const raw = sessionStorage.getItem(CHECKOUT_RESULT_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as {
+        result?: ScoreResult;
+        idea?: string;
+        market?: string;
+        email?: string;
+        lang?: Lang;
+        evaluationMeta?: EvaluationMeta | null;
+      };
+      if (!saved.result) return;
+      setResult(saved.result);
+      setIdea(saved.idea || "");
+      setMarket(saved.market || "");
+      setEmail(saved.email || "");
+      if (saved.lang === "en" || saved.lang === "es") {
+        setLang(saved.lang);
+        localStorage.setItem("lang", saved.lang);
+      }
+      setEvaluationMeta(saved.evaluationMeta || null);
+    } catch (error) {
+      console.warn("Could not restore open result after checkout:", error);
+      sessionStorage.removeItem(CHECKOUT_RESULT_KEY);
+    }
+  }
+
   // Load lang + session from localStorage and Supabase on mount
   useEffect(() => {
     const savedLang = localStorage.getItem("lang");
@@ -631,6 +676,8 @@ export default function HomeClient() {
     } else if (navigator.language?.toLowerCase().startsWith("es")) {
       setLang("es");
     }
+
+    restoreCurrentResultFromCheckout();
 
     async function boot() {
       const session = await refreshUserAndProfile();
@@ -744,6 +791,7 @@ export default function HomeClient() {
     setClaimShareCreditAfterAuth(false);
     localStorage.removeItem("rmi_session");
     localStorage.removeItem(PENDING_SHARE_CREDIT_KEY);
+    sessionStorage.removeItem(CHECKOUT_RESULT_KEY);
     turnstileWidgetIdRef.current = null;
     setTimeout(renderTurnstile, 0);
   }
@@ -1094,6 +1142,7 @@ export default function HomeClient() {
 
     setProCheckoutLoading(true);
     setError("");
+    persistCurrentResultForCheckout();
     try {
       const res = await fetch("/api/stripe/subscribe", {
         method: "POST",
@@ -1126,6 +1175,7 @@ export default function HomeClient() {
 
     setExtraEvalCheckoutLoading(true);
     setError("");
+    persistCurrentResultForCheckout();
     try {
       const res = await fetch("/api/stripe/extra-evaluation", {
         method: "POST",
@@ -1152,6 +1202,7 @@ export default function HomeClient() {
   async function startMarketStudyCheckout() {
     setMarketStudyCheckoutLoading(true);
     setError("");
+    persistCurrentResultForCheckout();
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
@@ -1187,6 +1238,7 @@ export default function HomeClient() {
     setEvaluationMeta(null);
     setBenchmark(null);
     setStrategicPlan(null);
+    sessionStorage.removeItem(CHECKOUT_RESULT_KEY);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -1655,63 +1707,67 @@ export default function HomeClient() {
                 return (
                   <section className="relative overflow-hidden rounded-3xl border border-[var(--electric)]/25 bg-gradient-to-br from-[var(--electric)]/15 via-[var(--surface)] to-amber-300/10 p-6 shadow-xl shadow-[var(--electric)]/10">
                     <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[var(--electric)]/20 blur-3xl" />
-                    <div className="relative grid items-start gap-6 lg:grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.95fr)]">
-                      <div>
+                    <div className="relative space-y-5">
+                      <div className="max-w-4xl">
                         <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--electric-light)]">
                           {lang === "es" ? "Mejorar esta idea con Pro" : "Make this idea stronger with Pro"}
                         </p>
                         <h3 className="mt-2 text-2xl font-black leading-tight text-[var(--text-primary)]">
                           {upsell.headline}
                         </h3>
-                        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)]">
+                        <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">
                           {upsell.body}
                         </p>
+                      </div>
 
-                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                          {cards.map((card) => (
-                            <div key={card.title} className="rounded-2xl border border-white/10 bg-black/20 p-4 text-left">
-                              <div className="mb-2 flex items-center gap-2">
-                                <span className="text-xl">{card.icon}</span>
-                                <h4 className="text-sm font-bold text-[var(--text-primary)]">{card.title}</h4>
-                              </div>
-                              <p className="text-xs leading-relaxed text-[var(--text-secondary)]">{card.body}</p>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        {cards.map((card) => (
+                          <div key={card.title} className="rounded-2xl border border-white/10 bg-black/20 p-4 text-left">
+                            <div className="mb-2 flex items-center gap-2">
+                              <span className="text-xl">{card.icon}</span>
+                              <h4 className="text-sm font-bold text-[var(--text-primary)]">{card.title}</h4>
                             </div>
-                          ))}
-                        </div>
+                            <p className="text-xs leading-relaxed text-[var(--text-secondary)]">{card.body}</p>
+                          </div>
+                        ))}
                       </div>
 
                       {/* mini benchmark preview */}
-                      <div className="relative h-full rounded-2xl border border-amber-300/20 bg-black/25 p-4">
+                      <div className="relative rounded-2xl border border-amber-300/20 bg-black/25 p-4">
                         <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-transparent via-black/5 to-black/25" />
-                        <div className="relative flex h-full flex-col">
-                          <div className="mb-3 flex items-center justify-between">
-                            <span className="text-xs font-bold uppercase tracking-[0.16em] text-amber-200">
-                              {lang === "es" ? "Benchmark Pro" : "Pro benchmark"}
-                            </span>
-                            <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-bold text-amber-100">
-                              {lang === "es" ? "Bloqueado" : "Locked"}
-                            </span>
+                        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                          <div className="lg:max-w-[45%]">
+                            <div className="mb-3 flex items-center gap-3">
+                              <span className="text-xs font-bold uppercase tracking-[0.16em] text-amber-200">
+                                {lang === "es" ? "Benchmark Pro" : "Pro benchmark"}
+                              </span>
+                              <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-bold text-amber-100">
+                                {lang === "es" ? "Bloqueado" : "Locked"}
+                              </span>
+                            </div>
+                            <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                              {lang === "es"
+                                ? "Desbloquea comparación por categoría, puntos fuertes/débiles y próximos pasos accionables."
+                                : "Unlock category comparison, stronger/weaker signals, and actionable next steps."}
+                            </p>
+                            <p className="mt-3 inline-flex rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-xs font-bold text-amber-100">
+                              {lang === "es" ? "$9 USD/mes · cancela cuando quieras" : "$9/mo · cancel anytime"}
+                            </p>
                           </div>
-                          <div className="space-y-2 blur-[1px]">
+
+                          <div className="min-w-0 flex-1 space-y-2 blur-[1px]">
                             <div className="h-2 rounded-full bg-[var(--electric)]/80" style={{ width: "82%" }} />
                             <div className="h-2 rounded-full bg-amber-300/70" style={{ width: "64%" }} />
-                            <div className="mt-4 grid grid-cols-2 gap-2">
-                              <div className="h-16 rounded-xl bg-green-400/10" />
-                              <div className="h-16 rounded-xl bg-amber-300/10" />
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                              <div className="h-12 rounded-xl bg-green-400/10" />
+                              <div className="h-12 rounded-xl bg-amber-300/10" />
                             </div>
                           </div>
-                          <p className="mt-4 text-xs leading-relaxed text-[var(--text-secondary)]">
-                            {lang === "es"
-                              ? "Desbloquea comparación por categoría, puntos fuertes/débiles y próximos pasos accionables."
-                              : "Unlock category comparison, stronger/weaker signals, and actionable next steps."}
-                          </p>
-                          <p className="mt-3 inline-flex rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-xs font-bold text-amber-100">
-                            {lang === "es" ? "$9 USD/mes · cancela cuando quieras" : "$9/mo · cancel anytime"}
-                          </p>
+
                           <button
                             onClick={startProCheckout}
                             disabled={proCheckoutLoading}
-                            className="mt-4 w-full rounded-2xl bg-[var(--electric)] px-6 py-4 text-base font-black text-white shadow-lg shadow-[var(--electric)]/25 transition-all hover:-translate-y-0.5 hover:bg-[var(--electric-dark)] hover:shadow-[0_0_32px_rgba(108,58,255,0.45)] disabled:opacity-50 cursor-pointer xl:mt-auto"
+                            className="w-full rounded-2xl bg-[var(--electric)] px-6 py-4 text-base font-black text-white shadow-lg shadow-[var(--electric)]/25 transition-all hover:-translate-y-0.5 hover:bg-[var(--electric-dark)] hover:shadow-[0_0_32px_rgba(108,58,255,0.45)] disabled:opacity-50 cursor-pointer lg:w-auto lg:min-w-56"
                           >
                             {proCheckoutLoading
                               ? (lang === "es" ? "Redirigiendo..." : "Redirecting...")
@@ -1805,7 +1861,7 @@ export default function HomeClient() {
                 >
                   <div className="flex items-center justify-center gap-2">
                     {shouldShowFinalFreeCta ? (
-                      <>{extraEvalCheckoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "Comprar otra evaluación · $1" : "Buy one more evaluation · $1")}</>
+                      <>{extraEvalCheckoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "🧾 Comprar otra evaluación · $1.00 USD" : "🧾 Buy one more evaluation · $1.00 USD")}</>
                     ) : (
                       <>🔄 {s.rateAnother}</>
                     )}

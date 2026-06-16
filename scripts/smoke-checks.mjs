@@ -9,6 +9,7 @@ const webhookRoute = readFileSync(new URL('../src/app/api/stripe/webhook/route.t
 const confirmRoute = readFileSync(new URL('../src/app/api/stripe/confirm/route.ts', import.meta.url), 'utf8');
 const shareCreditRoute = readFileSync(new URL('../src/app/api/share-credit/route.ts', import.meta.url), 'utf8');
 const rateRoute = readFileSync(new URL('../src/app/api/rate/route.ts', import.meta.url), 'utf8');
+const studyRoute = readFileSync(new URL('../src/app/api/study/route.ts', import.meta.url), 'utf8');
 const benchmarkRoute = readFileSync(new URL('../src/app/api/benchmark/route.ts', import.meta.url), 'utf8');
 const benchmarkChart = readFileSync(new URL('../src/components/BenchmarkChart.tsx', import.meta.url), 'utf8');
 const saveCurrentRoute = readFileSync(new URL('../src/app/api/history/save-current/route.ts', import.meta.url), 'utf8');
@@ -23,6 +24,8 @@ const termsPage = readFileSync(new URL('../src/app/terms/page.tsx', import.meta.
 const studyPage = readFileSync(new URL('../src/app/study/page.tsx', import.meta.url), 'utf8');
 const extraEvalCheckoutRoute = readFileSync(new URL('../src/app/api/stripe/extra-evaluation/route.ts', import.meta.url), 'utf8');
 const extraEvalConfirmRoute = readFileSync(new URL('../src/app/api/stripe/extra-evaluation/confirm/route.ts', import.meta.url), 'utf8');
+const anthropicUsageLib = readFileSync(new URL('../src/lib/anthropicUsage.ts', import.meta.url), 'utf8');
+const aiUsageMigration = readFileSync(new URL('../supabase/migrations/005_ai_usage_logs.sql', import.meta.url), 'utf8');
 
 assert(home.includes('Private by default') && home.includes('Privado por defecto'), 'Home should show compact privacy reassurance under the free/no-card stats in both languages.');
 assert(home.includes('We don’t sell, publish, or use your ideas to build competing businesses') && home.includes('No vendemos, publicamos ni usamos tus ideas para construir negocios competidores'), 'Home privacy copy should explicitly address idea theft concerns.');
@@ -123,7 +126,12 @@ assert(rateRoute.includes('isSuspiciousIdea') && rateRoute.includes('abuse_check
 assert(rateRoute.includes('TURNSTILE_SECRET_KEY') && rateRoute.includes('challenges.cloudflare.com/turnstile/v0/siteverify') && rateRoute.includes('turnstile_required'), '/api/rate should support conditional Cloudflare Turnstile verification for suspicious/over-threshold anonymous users.');
 assert(home.includes('NEXT_PUBLIC_TURNSTILE_SITE_KEY') && home.includes('turnstileToken') && home.includes('https://challenges.cloudflare.com/turnstile/v0/api.js'), 'Home should render and submit a Cloudflare Turnstile token when bot protection is configured.');
 assert(rateRoute.indexOf('isSuspiciousIdea') < rateRoute.indexOf('const searchQueries'), 'Abuse checks must run before web research starts.');
-assert(rateRoute.includes('const { error: saveError } = await supabase') && !rateRoute.includes('.then(({ error })'), '/api/rate must await evaluation persistence before returning so anonymous daily limits and CTA metadata advance reliably.');
+assert(rateRoute.includes('const { data: savedEvaluation, error: saveError } = await supabase') && rateRoute.includes('.select("id")') && !rateRoute.includes('.then(({ error })'), '/api/rate must await evaluation persistence and return the saved evaluation id before responding.');
+assert(anthropicUsageLib.includes('estimateAnthropicCostUsd') && anthropicUsageLib.includes('input_tokens') && anthropicUsageLib.includes('output_tokens'), 'Anthropic usage helper should estimate USD cost from provider token usage.');
+assert(aiUsageMigration.includes('create table if not exists ai_usage_logs') && aiUsageMigration.includes('estimated_cost_usd') && aiUsageMigration.includes('endpoint text not null'), 'Supabase migration should create ai_usage_logs for endpoint/model/token/cost observability.');
+assert(rateRoute.includes('logAnthropicUsage') && rateRoute.includes('endpoint: "/api/rate"') && rateRoute.includes('evaluationId:'), '/api/rate should log Anthropic usage with the saved evaluation id.');
+assert(studyRoute.includes('logAnthropicUsage') && studyRoute.includes('endpoint: "/api/study"'), '/api/study should log Anthropic usage for paid market studies.');
+assert(strategicPlanRoute.includes('logAnthropicUsage') && strategicPlanRoute.includes('endpoint: "/api/strategic-plan"'), '/api/strategic-plan should log Anthropic usage for Pro next-step generation.');
 
 const signOutMatch = home.match(/(?:async )?function handleSignOut\(\) \{([\s\S]*?)\n  \}/);
 assert(signOutMatch, 'Home should define handleSignOut.');

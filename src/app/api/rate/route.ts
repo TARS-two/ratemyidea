@@ -3,8 +3,10 @@ import { createHash } from "node:crypto";
 import { searchWeb, filterSourcesForQuality, formatSearchContext, formatSourcesForClient, markSourcesUsedInPrompt } from "./search";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getBadge, detectCategory } from "@/lib/badges";
+import { logAnthropicUsage } from "@/lib/anthropicUsage";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const BASIC_EVALUATION_MODEL = process.env.BASIC_EVALUATION_MODEL || "claude-sonnet-4-6";
 const BEEHIIV_API_KEY = process.env.BEEHIIV_API_KEY;
 const BEEHIIV_PUBLICATION_ID = process.env.BEEHIIV_PUBLICATION_ID;
 const FREE_LIMIT = 1;
@@ -15,6 +17,10 @@ const TURNSTILE_AFTER_FREE_EVALS = parsePositiveIntegerEnv(process.env.TURNSTILE
 
 type AnthropicMessageResponse = {
   content?: Array<{ text?: string }>;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+  };
 };
 
 type EvaluationBenchmarkRow = {
@@ -498,8 +504,9 @@ export async function POST(request: NextRequest) {
     const sources = formatSourcesForClient(qualityResults);
 
     // Step 2: Call Claude
+    const anthropicStartedAt = Date.now();
     const aiRes = await fetchAnthropicWithTimeout({
-      model: "claude-sonnet-4-6",
+      model: BASIC_EVALUATION_MODEL,
       max_tokens: 1500,
       system: SYSTEM_PROMPT,
       messages: [
@@ -513,6 +520,16 @@ export async function POST(request: NextRequest) {
     if (!aiRes.ok) {
       const errText = await aiRes.text();
       console.error("Claude API error:", aiRes.status, errText);
+      await logAnthropicUsage({
+        supabase,
+        endpoint: "/api/rate",
+        model: BASIC_EVALUATION_MODEL,
+        success: false,
+        statusCode: aiRes.status,
+        latencyMs: Date.now() - anthropicStartedAt,
+        errorMessage: errText.slice(0, 500),
+        userId,
+      });
       return NextResponse.json(
         { error: "Analysis failed. Please try again." },
         { status: 500 }
@@ -554,7 +571,7 @@ export async function POST(request: NextRequest) {
     parsed.extraCreditConsumed = extraCreditConsumed;
 
     // Save to DB before returning so free-limit counts and CTA metadata advance reliably.
-    const { error: saveError } = await supabase
+    const { data: savedEvaluation, error: saveError } = await supabase
       .from("evaluations")
       .insert({
         user_id: userId,
@@ -566,7 +583,9 @@ export async function POST(request: NextRequest) {
         lang: responseLang,
         badge: badge.label,
         result_json: parsed,
-      });
+      })
+      .select("id")
+      .single();
 
     if (saveError) {
       console.error("DB save error:", saveError.message);
@@ -575,6 +594,18 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       );
     }
+
+    await logAnthropicUsage({
+      supabase,
+      endpoint: "/api/rate",
+      model: BASIC_EVALUATION_MODEL,
+      responseData: aiData,
+      evaluationId: savedEvaluation?.id ?? null,
+      userId,
+      success: true,
+      statusCode: aiRes.status,
+      latencyMs: Date.now() - anthropicStartedAt,
+    });
 
     // Subscribe email to Beehiiv
     if (email && BEEHIIV_API_KEY && BEEHIIV_PUBLICATION_ID) {

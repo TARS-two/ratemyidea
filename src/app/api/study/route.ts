@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { searchWeb, filterSourcesForQuality, formatSearchContext, formatSourcesForClient, markSourcesUsedInPrompt } from "../rate/search";
+import { createServiceClient } from "@/lib/supabase/server";
+import { logAnthropicUsage } from "@/lib/anthropicUsage";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY!;
+const MARKET_STUDY_MODEL = process.env.MARKET_STUDY_MODEL || "claude-sonnet-4-6";
+
+type AnthropicStudyResponse = {
+  content?: Array<{ text?: string }>;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+  };
+};
 
 const STUDY_SYSTEM_PROMPT = `You are a senior business strategist and market research analyst. You produce comprehensive, data-backed market studies.
 
@@ -134,7 +145,10 @@ export async function POST(request: NextRequest) {
     const searchContext = formatSearchContext(qualityResults);
     const sources = formatSourcesForClient(qualityResults);
 
+    const supabase = createServiceClient();
+
     // Generate comprehensive study with Claude
+    const anthropicStartedAt = Date.now();
     const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -143,7 +157,7 @@ export async function POST(request: NextRequest) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
+        model: MARKET_STUDY_MODEL,
         max_tokens: 8000,
         system: STUDY_SYSTEM_PROMPT,
         messages: [
@@ -158,10 +172,28 @@ export async function POST(request: NextRequest) {
     if (!aiRes.ok) {
       const errText = await aiRes.text();
       console.error("Claude API error:", aiRes.status, errText);
+      await logAnthropicUsage({
+        supabase,
+        endpoint: "/api/study",
+        model: MARKET_STUDY_MODEL,
+        success: false,
+        statusCode: aiRes.status,
+        latencyMs: Date.now() - anthropicStartedAt,
+        errorMessage: errText.slice(0, 500),
+      });
       return NextResponse.json({ error: "Study generation failed" }, { status: 500 });
     }
 
-    const aiData = await aiRes.json();
+    const aiData = await aiRes.json() as AnthropicStudyResponse;
+    await logAnthropicUsage({
+      supabase,
+      endpoint: "/api/study",
+      model: MARKET_STUDY_MODEL,
+      responseData: aiData,
+      success: true,
+      statusCode: aiRes.status,
+      latencyMs: Date.now() - anthropicStartedAt,
+    });
     const content = aiData.content?.[0]?.text;
 
     if (!content) {

@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { logAnthropicUsage } from "@/lib/anthropicUsage";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const NEXT_STEPS_MODEL = process.env.NEXT_STEPS_MODEL || "claude-sonnet-4-6";
+
+type AnthropicPlanResponse = {
+  content?: Array<{ text?: string }>;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+  };
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,6 +61,7 @@ export async function POST(request: NextRequest) {
       ? `Genera exactamente 10 siguientes pasos concretos para esta idea de negocio: "${ideaName || ideaText.slice(0, 100)}"\n\nDescripción: ${ideaText}\n\nReglas:\n- No hagas un plan de 30 días.\n- Lista pasos numerados del 1 al 10.\n- Cada paso debe ser accionable, específico y ejecutable por una persona o equipo pequeño.\n- Ordena los pasos para que escalen la misma idea sin repetir acciones.\n- Incluye validación, oferta, primer canal comercial y una métrica de éxito.\n- No uses marcadores Markdown de negritas como **Título:**. Escribe texto plano limpio.\n- Sé breve: máximo 2 frases por paso.`
       : `Generate exactly 10 concrete next steps for this business idea: "${ideaName || ideaText.slice(0, 100)}"\n\nDescription: ${ideaText}\n\nRules:\n- Do not create a 30-day plan.\n- List numbered steps from 1 to 10.\n- Each step must be actionable, specific, and doable by one person or a small team.\n- Order the steps so they scale the same idea without repeating actions.\n- Include validation, offer, first sales channel, and one success metric.\n- Do not use Markdown bold markers like **Title:**. Write clean plain text.\n- Be concise: max 2 sentences per step.`;
 
+    const anthropicStartedAt = Date.now();
     const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -66,8 +76,31 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    if (!aiRes.ok) throw new Error("Claude API failed");
-    const aiData = await aiRes.json();
+    if (!aiRes.ok) {
+      const errText = await aiRes.text().catch(() => "Claude API failed");
+      await logAnthropicUsage({
+        supabase,
+        endpoint: "/api/strategic-plan",
+        model: NEXT_STEPS_MODEL,
+        success: false,
+        statusCode: aiRes.status,
+        latencyMs: Date.now() - anthropicStartedAt,
+        errorMessage: errText.slice(0, 500),
+        userId: user.id,
+      });
+      throw new Error("Claude API failed");
+    }
+    const aiData = await aiRes.json() as AnthropicPlanResponse;
+    await logAnthropicUsage({
+      supabase,
+      endpoint: "/api/strategic-plan",
+      model: NEXT_STEPS_MODEL,
+      responseData: aiData,
+      success: true,
+      statusCode: aiRes.status,
+      latencyMs: Date.now() - anthropicStartedAt,
+      userId: user.id,
+    });
     const plan = aiData.content?.[0]?.text;
 
     // Increment counter

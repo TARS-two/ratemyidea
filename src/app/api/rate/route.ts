@@ -499,7 +499,7 @@ export async function POST(request: NextRequest) {
 
     // Step 2: Call Claude
     const aiRes = await fetchAnthropicWithTimeout({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 1500,
       system: SYSTEM_PROMPT,
       messages: [

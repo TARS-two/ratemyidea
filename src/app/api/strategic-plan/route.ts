@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const NEXT_STEPS_MODEL = process.env.NEXT_STEPS_MODEL || "claude-sonnet-4-20250514";
+const NEXT_STEPS_MODEL = process.env.NEXT_STEPS_MODEL || "claude-sonnet-4-6";
 
 export async function POST(request: NextRequest) {
   try {

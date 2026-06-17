@@ -25,8 +25,20 @@ type AnthropicMessageResponse = {
 
 type EvaluationBenchmarkRow = {
   overall_score: number | null;
-  result_json?: unknown;
+  result_json?: { benchmarkSignals?: BenchmarkSignals } | null;
   category?: string | null;
+};
+
+type BenchmarkSignals = {
+  strengthTags: string[];
+  weaknessTags: string[];
+  riskTags: string[];
+};
+
+type CountedBenchmarkTags = {
+  commonWeakness: string | null;
+  commonStrength: string | null;
+  signalSampleSize: number;
 };
 
 type BasicBenchmark = {
@@ -38,6 +50,8 @@ type BasicBenchmark = {
   isAboveAverage: boolean | null;
   commonWeakness: string;
   commonStrength: string;
+  signalSource: "normalized_tags" | "category_fallback";
+  signalSampleSize: number;
   disclaimer: string;
 };
 
@@ -85,12 +99,21 @@ JSON schema:
   "summary": "<2-3 sentence overall assessment>",
   "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
   "risks": ["<risk 1>", "<risk 2>", "<risk 3>"],
-  "nextSteps": ["<concrete action 1>", "<concrete action 2>", "<concrete action 3>"]
+  "nextSteps": ["<concrete action 1>", "<concrete action 2>", "<concrete action 3>"],
+  "benchmarkSignals": {
+    "strengthTags": ["<1-3 tags from allowed list>"],
+    "weaknessTags": ["<1-3 tags from allowed list>"],
+    "riskTags": ["<1-3 tags from allowed list>"]
+  }
 }
 
 Additional field rules:
 - ideaName: A short, catchy name that captures the essence of the idea (e.g. "AI Market Studies", "Smart Meal Planner", "Freelancer CRM"). Think product name, not description.
 - keywords: Exactly 3 single-word or two-word tags that describe the idea's key attributes (e.g. ["AI-Powered", "B2B", "Scalable"] or ["SaaS", "Education", "Low-Cost"]).
+- benchmarkSignals: classify the idea into normalized, non-identifying tags only. Do not include the idea name, company name, user identity, location finer than country/region, or free-text descriptions. Use only these allowed tags:
+  strengthTags: ["specific customer", "clear pain", "repeat purchase", "strong niche", "low build complexity", "high willingness to pay", "timely trend", "clear distribution", "defensible insight"]
+  weaknessTags: ["unclear customer", "weak differentiation", "unclear monetization", "crowded channel", "high build complexity", "low willingness to pay", "vague scope", "unclear acquisition", "location assumptions"]
+  riskTags: ["market too small", "regulated market", "platform dependency", "long sales cycle", "trust barrier", "data dependency", "operational complexity", "copycat risk", "pricing sensitivity"]
 
 Rules:
 - Be honest and direct. Don't sugarcoat bad ideas.
@@ -190,6 +213,95 @@ function isSuspiciousIdea(idea: string): boolean {
   return urls.length >= 3 || repeatedCharacterRun || trimmed.length > 0 && words.length <= 2;
 }
 
+const ALLOWED_BENCHMARK_SIGNALS = {
+  strengthTags: [
+    "specific customer",
+    "clear pain",
+    "repeat purchase",
+    "strong niche",
+    "low build complexity",
+    "high willingness to pay",
+    "timely trend",
+    "clear distribution",
+    "defensible insight",
+  ],
+  weaknessTags: [
+    "unclear customer",
+    "weak differentiation",
+    "unclear monetization",
+    "crowded channel",
+    "high build complexity",
+    "low willingness to pay",
+    "vague scope",
+    "unclear acquisition",
+    "location assumptions",
+  ],
+  riskTags: [
+    "market too small",
+    "regulated market",
+    "platform dependency",
+    "long sales cycle",
+    "trust barrier",
+    "data dependency",
+    "operational complexity",
+    "copycat risk",
+    "pricing sensitivity",
+  ],
+} as const;
+
+function normalizeSignalList(value: unknown, allowed: readonly string[]): string[] {
+  if (!Array.isArray(value)) return [];
+  const allowedSet = new Set(allowed);
+  return Array.from(new Set(
+    value
+      .map((item) => typeof item === "string" ? item.trim().toLowerCase() : "")
+      .filter((item) => allowedSet.has(item))
+  )).slice(0, 3);
+}
+
+function normalizeBenchmarkSignals(value: unknown): BenchmarkSignals {
+  const raw = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  return {
+    strengthTags: normalizeSignalList(raw.strengthTags, ALLOWED_BENCHMARK_SIGNALS.strengthTags),
+    weaknessTags: normalizeSignalList(raw.weaknessTags, ALLOWED_BENCHMARK_SIGNALS.weaknessTags),
+    riskTags: normalizeSignalList(raw.riskTags, ALLOWED_BENCHMARK_SIGNALS.riskTags),
+  };
+}
+
+function mostCommonTag(counts: Map<string, number>, minimumCount: number): string | null {
+  let winner: string | null = null;
+  let winnerCount = 0;
+  for (const [tag, count] of counts.entries()) {
+    if (count > winnerCount) {
+      winner = tag;
+      winnerCount = count;
+    }
+  }
+  return winnerCount >= minimumCount ? winner : null;
+}
+
+function countBenchmarkTags(rows: EvaluationBenchmarkRow[]): CountedBenchmarkTags {
+  const weaknessCounts = new Map<string, number>();
+  const strengthCounts = new Map<string, number>();
+  let signalSampleSize = 0;
+
+  for (const row of rows) {
+    const signals = normalizeBenchmarkSignals(row.result_json?.benchmarkSignals);
+    if (!signals.strengthTags.length && !signals.weaknessTags.length && !signals.riskTags.length) continue;
+    signalSampleSize += 1;
+    for (const tag of signals.weaknessTags) weaknessCounts.set(tag, (weaknessCounts.get(tag) ?? 0) + 1);
+    for (const tag of signals.riskTags) weaknessCounts.set(tag, (weaknessCounts.get(tag) ?? 0) + 1);
+    for (const tag of signals.strengthTags) strengthCounts.set(tag, (strengthCounts.get(tag) ?? 0) + 1);
+  }
+
+  const minimumCount = signalSampleSize >= 12 ? 3 : 2;
+  return {
+    commonWeakness: signalSampleSize >= 5 ? mostCommonTag(weaknessCounts, minimumCount) : null,
+    commonStrength: signalSampleSize >= 5 ? mostCommonTag(strengthCounts, minimumCount) : null,
+    signalSampleSize,
+  };
+}
+
 function pickCategoryPattern(category: string): { commonWeakness: string; commonStrength: string } {
   const normalized = category.toLowerCase();
   if (normalized.includes("local") || normalized.includes("service")) {
@@ -263,7 +375,11 @@ async function buildBasicBenchmark(
   const categoryAverage = scores.length
     ? Math.round((scores.reduce((sum, value) => sum + value, 0) / scores.length) * 10) / 10
     : null;
-  const { commonWeakness, commonStrength } = pickCategoryPattern(category);
+  const countedTags = countBenchmarkTags(categoryRows);
+  const fallbackPattern = pickCategoryPattern(category);
+  const signalSource = countedTags.commonWeakness && countedTags.commonStrength
+    ? "normalized_tags"
+    : "category_fallback";
 
   return {
     category,
@@ -272,8 +388,10 @@ async function buildBasicBenchmark(
     sampleSize: categorySampleSize,
     totalSampleSize,
     isAboveAverage: categoryAverage === null ? null : score >= categoryAverage,
-    commonWeakness,
-    commonStrength,
+    commonWeakness: countedTags.commonWeakness ?? fallbackPattern.commonWeakness,
+    commonStrength: countedTags.commonStrength ?? fallbackPattern.commonStrength,
+    signalSource,
+    signalSampleSize: countedTags.signalSampleSize,
     disclaimer: "Based on the current sample of evaluated ideas. This benchmark is directional, not a scientific ranking.",
   };
 }
@@ -561,6 +679,7 @@ export async function POST(request: NextRequest) {
     // Attach badge + category + sources
     const badge = getBadge(parsed.overall);
     const category = detectCategory(idea);
+    parsed.benchmarkSignals = normalizeBenchmarkSignals(parsed.benchmarkSignals);
     parsed.badge = badge;
     parsed.category = category;
     parsed.sources = sources;

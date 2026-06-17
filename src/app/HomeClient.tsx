@@ -84,6 +84,8 @@ interface BasicBenchmark {
   isAboveAverage: boolean | null;
   commonWeakness: string;
   commonStrength: string;
+  signalSource?: "normalized_tags" | "category_fallback";
+  signalSampleSize?: number;
   disclaimer: string;
 }
 
@@ -210,6 +212,33 @@ const BENCHMARK_SIGNAL_COPY_ES: Record<string, string> = {
   "stronger traction when the customer segment is specific": "mejor tracción cuando el segmento de cliente es específico",
   "unclear monetization or differentiation": "monetización o diferenciación poco claras",
   "stronger signals when the target customer is specific": "mejores señales cuando el cliente objetivo es específico",
+  "specific customer": "cliente específico",
+  "clear pain": "dolor claro",
+  "repeat purchase": "compra recurrente",
+  "strong niche": "nicho fuerte",
+  "low build complexity": "baja complejidad inicial",
+  "high willingness to pay": "alta disposición a pagar",
+  "timely trend": "tendencia oportuna",
+  "clear distribution": "distribución clara",
+  "defensible insight": "insight defendible",
+  "unclear customer": "cliente poco claro",
+  "weak differentiation": "diferenciación débil",
+  "unclear monetization": "monetización poco clara",
+  "crowded channel": "canal saturado",
+  "high build complexity": "alta complejidad inicial",
+  "low willingness to pay": "baja disposición a pagar",
+  "vague scope": "alcance vago",
+  "unclear acquisition": "adquisición poco clara",
+  "location assumptions": "supuestos de ubicación",
+  "market too small": "mercado demasiado pequeño",
+  "regulated market": "mercado regulado",
+  "platform dependency": "dependencia de plataforma",
+  "long sales cycle": "ciclo de venta largo",
+  "trust barrier": "barrera de confianza",
+  "data dependency": "dependencia de datos",
+  "operational complexity": "complejidad operativa",
+  "copycat risk": "riesgo de copia",
+  "pricing sensitivity": "sensibilidad al precio",
 };
 
 const IMPROVEMENT_LEVER_COPY_ES: Record<string, string> = {
@@ -338,6 +367,13 @@ function BasicBenchmarkCard({
         : lang === "es"
           ? "Tu score está por debajo del promedio actual de la categoría."
           : "Your score is below the current category average.";
+  const signalConfidenceCopy = benchmark.signalSource === "normalized_tags"
+    ? lang === "es"
+      ? `Confianza de patrón: basada en ${benchmark.signalSampleSize ?? 0} señales normalizadas de esta categoría.`
+      : `Pattern confidence: based on ${benchmark.signalSampleSize ?? 0} normalized signals in this category.`
+    : lang === "es"
+      ? "Confianza de patrón: muestra baja; usando fallback heurístico por categoría."
+      : "Pattern confidence: low sample; using category heuristic fallback.";
 
   return (
     <section className="rounded-2xl border border-[var(--electric)]/20 bg-[var(--surface)] p-6">
@@ -395,6 +431,7 @@ function BasicBenchmarkCard({
           <li>• {comparisonCopy}</li>
           <li>• {lang === "es" ? "Debilidad común" : "Common weakness"}: {benchmarkCopy(benchmark.commonWeakness, lang)}</li>
           <li>• {lang === "es" ? "Fortaleza común" : "Common strength"}: {benchmarkCopy(benchmark.commonStrength, lang)}</li>
+          <li>• {signalConfidenceCopy}</li>
         </ul>
       </div>
 
@@ -1565,6 +1602,66 @@ export default function HomeClient() {
 
               {result.basicBenchmark && (
                 <BasicBenchmarkCard benchmark={result.basicBenchmark} userScore={result.overall} lang={lang} />
+              )}
+
+              {!isCurrentPro && (
+                <section data-testid="inline-share-card-preview" className="rounded-3xl border border-[var(--electric)]/20 bg-gradient-to-br from-[var(--surface)] via-[var(--surface)] to-[var(--electric)]/10 p-5 shadow-xl shadow-black/10">
+                  <div className="grid gap-5 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1fr)] lg:items-center">
+                    <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/20">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        key={`inline-${hideIdea ? "hidden" : "visible"}`}
+                        src={getShareCardUrl()}
+                        alt="Share card preview"
+                        width={1080}
+                        height={1080}
+                        className="block h-auto w-full"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--electric-light)]">
+                        {lang === "es" ? "Comparte tu score" : "Share your score"}
+                      </p>
+                      <h3 className="mt-2 text-xl font-black text-[var(--text-primary)]">
+                        {lang === "es" ? "Tu score card ya está lista" : "Your score card is ready"}
+                      </h3>
+                      <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+                        {lang === "es"
+                          ? "Comparte una versión limpia de la evaluación sin saturar el resultado. Puedes ocultar el nombre de la idea antes de compartir."
+                          : "Share a clean version of the evaluation without crowding the result. You can hide the idea name before sharing."}
+                      </p>
+                      <label className="mt-4 flex items-center gap-3 text-sm text-[var(--text-secondary)]">
+                        <input
+                          type="checkbox"
+                          checked={hideIdea}
+                          onChange={(e) => setHideIdea(e.target.checked)}
+                          className="h-4 w-4 accent-[var(--electric)]"
+                        />
+                        {lang === "es" ? "Ocultar nombre de la idea" : "Hide idea name"}
+                      </label>
+                      <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                        <button
+                          onClick={() => handleShareWithImage()}
+                          className="rounded-xl bg-[var(--electric)] px-4 py-3 text-sm font-bold text-white transition-all hover:bg-[var(--electric-dark)] cursor-pointer"
+                        >
+                          📤 {lang === "es" ? "Compartir card" : "Share card"}
+                        </button>
+                        <button
+                          onClick={handleDownloadImage}
+                          className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-semibold text-[var(--text-primary)] transition-all hover:border-[var(--electric)]/40 cursor-pointer"
+                        >
+                          ⬇️ {lang === "es" ? "Descargar imagen" : "Download image"}
+                        </button>
+                        <button
+                          onClick={handleCopyText}
+                          className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-semibold text-[var(--text-primary)] transition-all hover:border-[var(--electric)]/40 cursor-pointer"
+                        >
+                          🔗 {lang === "es" ? "Copiar link/texto" : "Copy link/text"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </section>
               )}
 
               {/* Strengths & Risks */}

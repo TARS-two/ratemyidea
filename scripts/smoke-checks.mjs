@@ -27,6 +27,8 @@ const extraEvalConfirmRoute = readFileSync(new URL('../src/app/api/stripe/extra-
 const anthropicUsageLib = readFileSync(new URL('../src/lib/anthropicUsage.ts', import.meta.url), 'utf8');
 const aiUsageMigration = readFileSync(new URL('../supabase/migrations/005_ai_usage_logs.sql', import.meta.url), 'utf8');
 
+const regionalPricingDoc = readFileSync(new URL('../docs/regional-pricing-decision.md', import.meta.url), 'utf8');
+
 assert(home.includes('Private by default') && home.includes('Privado por defecto'), 'Home should show compact privacy reassurance under the free/no-card stats in both languages.');
 assert(home.includes('We don’t sell, publish, or use your ideas to build competing businesses') && home.includes('No vendemos, publicamos ni usamos tus ideas para construir negocios competidores'), 'Home privacy copy should explicitly address idea theft concerns.');
 assert(home.includes('detectIdeaLanguage') && home.includes('setLang(detectedIdeaLang)'), 'Home should auto-select Spanish/English from the prompt before submitting so result language follows the idea, not just the UI.');
@@ -183,6 +185,12 @@ assert(rateRoute.includes('basicBenchmark') && rateRoute.includes('Based on the 
 assert(home.includes('result.basicBenchmark') && home.includes('Category signal') && home.includes('Señal de categoría'), 'Free results should render a basic benchmark card inside the main analysis.');
 assert(home.includes('categoryAverage') && home.includes('Your score') && home.includes('Category average'), 'Free benchmark should include a visual your-score vs category-average comparison.');
 assert(home.includes('This benchmark is directional, not a scientific ranking') && home.includes('muestra actual de ideas evaluadas'), 'Benchmark UI should avoid overpromising and include directional/sample disclaimer copy.');
+assert(rateRoute.includes('benchmarkSignals') && rateRoute.includes('normalizeBenchmarkSignals') && rateRoute.includes('countBenchmarkTags'), '/api/rate should request, normalize, persist, and aggregate benchmarkSignals without a second AI call.');
+assert(rateRoute.includes('? "normalized_tags"') && rateRoute.includes(': "category_fallback"') && rateRoute.includes('fallbackPattern.commonWeakness'), 'Basic benchmark should prefer normalized tag counts and fall back to category heuristics when sample size is low.');
+assert(home.includes('signalSource') && home.includes('Pattern confidence') && home.includes('Confianza de patrón'), 'Free benchmark UI should disclose whether common signals are tag-based or heuristic fallback.');
+assert(home.includes('inline-share-card-preview') && home.includes('Share card') && home.includes('Download image') && home.includes('Copy link/text'), 'Basic results should include a compact inline share-card preview with clear share, download, and copy actions.');
+assert(home.includes('Comparte tu score') && home.includes('Share your score'), 'Inline share card should invite sharing without replacing Pro, Market Study, or extra-evaluation CTAs.');
+assert(regionalPricingDoc.includes('Do not auto-geo-price') && regionalPricingDoc.includes('$29 USD') && regionalPricingDoc.includes('LATAM') && regionalPricingDoc.includes('Stripe Price IDs'), 'Regional pricing should be documented as a human-owned commercial decision before code changes.');
 assert(benchmarkRoute.includes('subscoreAverages') && benchmarkRoute.includes('improvementLevers') && benchmarkRoute.includes('strongerThanSimilar') && benchmarkRoute.includes('weakerThanSimilar'), 'Pro benchmark API should return richer comparison fields beyond percentile and histogram.');
 assert(benchmarkChart.includes('Percentile badge') && benchmarkChart.includes('sub-score comparison') && benchmarkChart.includes('improvement levers'), 'Pro benchmark component should render percentile, sub-score comparison, and improvement levers.');
 assert(home.includes('Build the 10-step action plan'), 'Generate 10 steps CTA should be more protagonist for Pro users.');

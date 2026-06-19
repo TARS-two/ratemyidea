@@ -735,6 +735,7 @@ export default function HomeClient() {
         localStorage.setItem("lang", saved.lang);
       }
       setEvaluationMeta(saved.evaluationMeta || null);
+      sessionStorage.removeItem(CHECKOUT_RESULT_KEY);
     } catch (error) {
       console.warn("Could not restore open result after checkout:", error);
       sessionStorage.removeItem(CHECKOUT_RESULT_KEY);

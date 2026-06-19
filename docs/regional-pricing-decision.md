@@ -1,48 +1,79 @@
 # Regional Pricing Decision — ratemyidea.ai
 
-Last updated: 2026-06-17
+Last updated: 2026-06-19
 
 ## Decision status
 
-Human-owned commercial decision. Do not auto-geo-price yet.
+Phil approved regional pricing for the Market Study as a visible, transparent pricing experiment.
 
-## Current default
+This is **not** shadow pricing. The product page/preview must show the same server-resolved price before Stripe checkout.
 
-- Pro: $9 USD/month global.
-- Market Study: $49 USD global.
-- Extra evaluation: $1.00 USD global.
+## Current pricing v1
 
-## Signal from controlled sale
+- Extra evaluation: $1.00 USD global. Do not regionalize for now.
+- Market Study:
+  - US/Canada: default `$49 USD`.
+  - Mexico/LATAM: default `$29 USD`, unless Vercel env vars point to a local-currency Stripe Price ID/display.
+  - Global fallback: default `$49 USD`.
+- Pro: keep current global pricing for now. Revisit only after quota/cost rules for Pro refinement are clearer.
 
-- $49 USD can create friction, especially outside higher-income markets.
-- $29 USD was mentioned as a lower-friction entry point for USA testing.
-- LATAM likely needs a different anchor or offer structure, not just a silent discount.
+## Why this shape
 
-## Guardrails before code
-
-Do not auto-geo-price until Phil chooses:
-
-1. Offer: Pro, Market Study, one-time bundle, LATAM discount, or entry-level plan.
-2. Regions: USA only, Mexico, LATAM, global, or manual controlled-sale coupons.
-3. Currency: keep USD or add local currency Price IDs.
-4. Stripe Price IDs: one clear Price ID per product/region/currency if automated.
-5. Tax/support implications.
-6. VPN/geo ambiguity handling.
-7. Copy: explain the offer without creating unfairness or confusion.
-
-## Practical recommendation
-
-For now, use a controlled manual experiment instead of automatic geo pricing:
-
-- Keep public pricing stable.
-- Test a $29 USD Market Study or bundle offer manually with selected USA prospects.
-- Test LATAM as a founder-approved coupon/manual link, not hidden geolocation.
-- Decide automation only after conversion data shows the experiment matters.
+- Market Study is the clearest one-time purchase for testing price sensitivity.
+- Regional pricing reduces LATAM friction without cheapening the whole product.
+- Extra evaluation is already a low-friction micro-purchase.
+- Pro subscription economics depend on future usage limits and should not be changed blindly.
 
 ## Implementation rule
 
-Any future pricing code must preserve this rule in smoke checks:
+Regional pricing must be resolved server-side from durable country headers such as `x-vercel-ip-country`, not from client-side IP logic.
 
-- Do not auto-geo-price.
-- Do not switch Stripe Price IDs from inferred country alone.
-- Require explicit product/region mapping and fallback to the current global prices.
+The same server resolver must be used by:
+
+1. `/api/pricing` — display-only pricing for the UI.
+2. `/api/checkout` — actual Stripe Price ID selection for Market Study checkout.
+
+The UI should say:
+
+- EN: `Regional pricing applied when available.`
+- ES: `Precio regional aplicado cuando está disponible.`
+
+## Stripe env vars
+
+Required fallback:
+
+```text
+MARKET_STUDY_PRICE_ID=<global existing price id>
+```
+
+Optional regional overrides:
+
+```text
+MARKET_STUDY_PRICE_US_ID=<stripe price id>
+MARKET_STUDY_PRICE_US_DISPLAY=$49 USD
+MARKET_STUDY_PRICE_US_CURRENCY=USD
+
+MARKET_STUDY_PRICE_LATAM_ID=<stripe price id>
+MARKET_STUDY_PRICE_LATAM_DISPLAY=$29 USD
+MARKET_STUDY_PRICE_LATAM_CURRENCY=USD
+
+MARKET_STUDY_PRICE_DEFAULT_ID=<stripe price id>
+MARKET_STUDY_PRICE_DEFAULT_DISPLAY=$49 USD
+MARKET_STUDY_PRICE_DEFAULT_CURRENCY=USD
+```
+
+If regional Price IDs are not configured, the resolver falls back to the global/default Market Study price and display. This prevents the page from showing a LATAM discount while Stripe charges the global price.
+
+## Guardrails
+
+- Do not change price after user clicks checkout.
+- Do not hide regional pricing until Stripe.
+- Do not imply exact location; use “regional pricing” language.
+- Do not regionalize Pro until product usage/cost limits are explicit.
+- Record `pricingRegion`, `detectedCountry`, and display price in Stripe metadata for support/debugging.
+
+## Open decisions
+
+- Whether LATAM should remain `$29 USD` or move to a MXN-denominated price such as `$499 MXN`.
+- Whether to add a manual “wrong region?” support flow or promo code fallback.
+- Whether to expose region label in UI or keep it to Stripe metadata/support.

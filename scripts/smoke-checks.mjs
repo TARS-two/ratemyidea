@@ -22,9 +22,12 @@ const supabaseClient = readFileSync(new URL('../src/lib/supabase/client.ts', imp
 const privacyPage = readFileSync(new URL('../src/app/privacy/page.tsx', import.meta.url), 'utf8');
 const termsPage = readFileSync(new URL('../src/app/terms/page.tsx', import.meta.url), 'utf8');
 const studyPage = readFileSync(new URL('../src/app/study/page.tsx', import.meta.url), 'utf8');
+const checkoutRoute = readFileSync(new URL('../src/app/api/checkout/route.ts', import.meta.url), 'utf8');
 const extraEvalCheckoutRoute = readFileSync(new URL('../src/app/api/stripe/extra-evaluation/route.ts', import.meta.url), 'utf8');
 const extraEvalConfirmRoute = readFileSync(new URL('../src/app/api/stripe/extra-evaluation/confirm/route.ts', import.meta.url), 'utf8');
 const anthropicUsageLib = readFileSync(new URL('../src/lib/anthropicUsage.ts', import.meta.url), 'utf8');
+const pricingLib = readFileSync(new URL('../src/lib/pricing.ts', import.meta.url), 'utf8');
+const pricingRoute = readFileSync(new URL('../src/app/api/pricing/route.ts', import.meta.url), 'utf8');
 const aiUsageMigration = readFileSync(new URL('../supabase/migrations/005_ai_usage_logs.sql', import.meta.url), 'utf8');
 
 const regionalPricingDoc = readFileSync(new URL('../docs/regional-pricing-decision.md', import.meta.url), 'utf8');
@@ -39,6 +42,7 @@ assert(marketStudyPreview.includes('Complete Market Study') && marketStudyPrevie
 assert(marketStudyPreview.includes('max-h-[82vh]') && marketStudyPreview.includes('overflow-y-auto') && marketStudyPreview.includes('blur-[3px]'), 'Market Study preview should be an internal scrollable PDF-style preview with blurred locked sections.');
 assert(marketStudyPreview.includes('basada en la plantilla real del PDF') && marketStudyPreview.includes('generic preview based on the real PDF template'), 'Market Study preview should clarify it is a generic preview based on the real PDF template and the real report is generated after purchase.');
 assert(marketStudyPreview.includes('🛒') && marketStudyPreview.includes('Comprar Market Study') && marketStudyPreview.includes('Secure payment processed by Stripe') && marketStudyPreview.includes('$49 USD'), 'Market Study checkout CTA should feel professional: cart icon, product-focused copy, secure payment note, and price separated as metadata.');
+assert(marketStudyPreview.includes('marketStudyPrice') && marketStudyPreview.includes('Regional pricing applied when available') && marketStudyPreview.includes('Precio regional aplicado cuando está disponible'), 'Market Study preview should show the server-resolved regional price before Stripe checkout.');
 assert(marketStudyPreview.includes('AI Norte') && marketStudyPreview.includes('Systems over motivation'), 'Market Study preview should carry AI Norte branding, not just app UI chrome.');
 assert(marketStudyPreview.includes('result.categories.map') && marketStudyPreview.includes('Basic analysis signal') && marketStudyPreview.includes('Señal del análisis básico'), 'Preview unlocked content should reuse already-generated free analysis/category cards instead of spending on new research before purchase.');
 assert(!marketStudyPreview.includes('$4.8B') && !marketStudyPreview.includes('$420M'), 'Preview should not show fake market-sizing values as if generated before checkout.');
@@ -190,7 +194,11 @@ assert(rateRoute.includes('? "normalized_tags"') && rateRoute.includes(': "categ
 assert(home.includes('signalSource') && home.includes('Pattern confidence') && home.includes('Confianza de patrón'), 'Free benchmark UI should disclose whether common signals are tag-based or heuristic fallback.');
 assert(home.includes('inline-share-card-preview') && home.includes('Share card') && home.includes('Download image') && home.includes('Copy link/text'), 'Basic results should include a compact inline share-card preview with clear share, download, and copy actions.');
 assert(home.includes('Comparte tu score') && home.includes('Share your score'), 'Inline share card should invite sharing without replacing Pro, Market Study, or extra-evaluation CTAs.');
-assert(regionalPricingDoc.includes('Do not auto-geo-price') && regionalPricingDoc.includes('$29 USD') && regionalPricingDoc.includes('LATAM') && regionalPricingDoc.includes('Stripe Price IDs'), 'Regional pricing should be documented as a human-owned commercial decision before code changes.');
+assert(regionalPricingDoc.includes('visible, transparent pricing experiment') && regionalPricingDoc.includes('$29 USD') && regionalPricingDoc.includes('LATAM') && regionalPricingDoc.includes('Stripe env vars'), 'Regional pricing should be documented as a transparent Market Study experiment with Stripe Price ID/env guardrails.');
+assert(pricingLib.includes('resolvePricing') && pricingLib.includes('x-vercel-ip-country') && pricingLib.includes('MARKET_STUDY_PRICE_LATAM_ID'), 'Regional pricing should resolve server-side from country headers and Stripe Price IDs, not client-side IP logic.');
+assert(pricingRoute.includes('resolvePricing') && pricingRoute.includes('NextResponse.json'), '/api/pricing should expose display-only pricing resolved by the same server pricing helper.');
+assert(checkoutRoute.includes('resolvePricing') && checkoutRoute.includes('pricing.marketStudy.priceId') && checkoutRoute.includes('pricingRegion') && checkoutRoute.includes('detectedCountry'), 'Market Study checkout should use the same server-side regional pricing resolver and record pricing metadata.');
+assert(home.includes('fetch("/api/pricing"') && home.includes('setPricing') && home.includes('pricing={pricing}'), 'Home should load regional pricing from /api/pricing and pass it into the Market Study preview.');
 assert(benchmarkRoute.includes('subscoreAverages') && benchmarkRoute.includes('improvementLevers') && benchmarkRoute.includes('strongerThanSimilar') && benchmarkRoute.includes('weakerThanSimilar'), 'Pro benchmark API should return richer comparison fields beyond percentile and histogram.');
 assert(benchmarkChart.includes('Percentile badge') && benchmarkChart.includes('sub-score comparison') && benchmarkChart.includes('improvement levers'), 'Pro benchmark component should render percentile, sub-score comparison, and improvement levers.');
 assert(home.includes('Build the 10-step action plan'), 'Generate 10 steps CTA should be more protagonist for Pro users.');

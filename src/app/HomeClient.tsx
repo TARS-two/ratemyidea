@@ -108,6 +108,16 @@ interface EvaluationMeta {
   freeEvaluationsLeft: number;
 }
 
+interface PricingDisplay {
+  detectedCountry: string;
+  pricingRegion: string;
+  marketStudy: {
+    display: string;
+    currency: string;
+    regionLabel?: string;
+  };
+}
+
 interface HistoryEvaluation {
   id: string;
   idea_name: string | null;
@@ -535,6 +545,7 @@ export default function HomeClient() {
   const [userSession, setUserSession] = useState<UserSession | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [evaluationMeta, setEvaluationMeta] = useState<EvaluationMeta | null>(null);
+  const [pricing, setPricing] = useState<PricingDisplay | null>(null);
   const [claimShareCreditAfterAuth, setClaimShareCreditAfterAuth] = useState(false);
   const [shareCreditClaimed, setShareCreditClaimed] = useState(false);
   const [benchmark, setBenchmark] = useState<BenchmarkData | null>(null);
@@ -654,6 +665,27 @@ export default function HomeClient() {
   useEffect(() => {
     renderTurnstile();
   }, [userSession?.isPro, result]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPricing() {
+      try {
+        const res = await fetch("/api/pricing");
+        const data = await res.json();
+        if (!cancelled && data?.marketStudy?.display) {
+          setPricing(data as PricingDisplay);
+        }
+      } catch {
+        // Keep the hardcoded fallback in MarketStudyPreview if pricing lookup fails.
+      }
+    }
+
+    loadPricing();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function claimPendingShareCredit(token: string) {
     if (localStorage.getItem(PENDING_SHARE_CREDIT_KEY) !== "true") return;
@@ -2068,6 +2100,7 @@ export default function HomeClient() {
           lang={lang}
           result={result}
           loading={marketStudyCheckoutLoading}
+          pricing={pricing}
           onClose={() => setShowMarketStudyPreview(false)}
           onCheckout={startMarketStudyCheckout}
         />

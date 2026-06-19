@@ -17,10 +17,19 @@ type PreviewResult = {
   }[];
 };
 
+type PricingDisplay = {
+  pricingRegion: string;
+  marketStudy: {
+    display: string;
+    regionLabel?: string;
+  };
+};
+
 interface MarketStudyPreviewProps {
   lang: Lang;
   result: PreviewResult;
   loading: boolean;
+  pricing: PricingDisplay | null;
   onClose: () => void;
   onCheckout: () => void;
 }
@@ -67,9 +76,10 @@ function PlaceholderLines() {
   );
 }
 
-export default function MarketStudyPreview({ lang, result, loading, onClose, onCheckout }: MarketStudyPreviewProps) {
+export default function MarketStudyPreview({ lang, result, loading, pricing, onClose, onCheckout }: MarketStudyPreviewProps) {
   const isEs = lang === "es";
   const primaryRisk = result.risks[0] || (isEs ? "Validar demanda real antes de escalar." : "Validate real demand before scaling.");
+  const marketStudyPrice = pricing?.marketStudy.display || "$49 USD";
 
   return (
     <div
@@ -255,10 +265,10 @@ export default function MarketStudyPreview({ lang, result, loading, onClose, onC
             >
               <span aria-hidden="true" className="text-lg">🛒</span>
               <span>{loading ? (isEs ? "Abriendo checkout seguro..." : "Opening secure checkout...") : (isEs ? "Comprar Market Study" : "Buy Market Study")}</span>
-              <span className="rounded-full bg-white/15 px-3 py-1 text-sm">$49 USD</span>
+              <span className="rounded-full bg-white/15 px-3 py-1 text-sm">{marketStudyPrice}</span>
             </button>
             <p className="mt-2 text-center text-xs text-[var(--text-muted)]">
-              {isEs ? "Pago seguro procesado por Stripe" : "Secure payment processed by Stripe"}
+              {isEs ? "Precio regional aplicado cuando está disponible. Pago seguro procesado por Stripe" : "Regional pricing applied when available. Secure payment processed by Stripe"}
             </p>
           </div>
         </div>

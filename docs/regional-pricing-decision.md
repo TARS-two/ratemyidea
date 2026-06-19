@@ -12,9 +12,9 @@ This is **not** shadow pricing. The product page/preview must show the same serv
 
 - Extra evaluation: $1.00 USD global. Do not regionalize for now.
 - Market Study:
-  - US/Canada: default `$49 USD`.
-  - Mexico/LATAM: default `$29 USD`, unless Vercel env vars point to a local-currency Stripe Price ID/display.
-  - Global fallback: default `$49 USD`.
+  - US/Canada: `$29 USD`.
+  - Mexico/LATAM: `$399 MXN`.
+  - Global fallback: `$29 USD`.
 - Pro: keep current global pricing for now. Revisit only after quota/cost rules for Pro refinement are clearer.
 
 ## Why this shape
@@ -44,21 +44,23 @@ Required fallback:
 
 ```text
 MARKET_STUDY_PRICE_ID=<global existing price id>
+MARKET_STUDY_PRICE_DISPLAY=$29 USD
+MARKET_STUDY_PRICE_CURRENCY=USD
 ```
 
 Optional regional overrides:
 
 ```text
 MARKET_STUDY_PRICE_US_ID=<stripe price id>
-MARKET_STUDY_PRICE_US_DISPLAY=$49 USD
+MARKET_STUDY_PRICE_US_DISPLAY=$29 USD
 MARKET_STUDY_PRICE_US_CURRENCY=USD
 
 MARKET_STUDY_PRICE_LATAM_ID=<stripe price id>
-MARKET_STUDY_PRICE_LATAM_DISPLAY=$29 USD
-MARKET_STUDY_PRICE_LATAM_CURRENCY=USD
+MARKET_STUDY_PRICE_LATAM_DISPLAY=$399 MXN
+MARKET_STUDY_PRICE_LATAM_CURRENCY=MXN
 
 MARKET_STUDY_PRICE_DEFAULT_ID=<stripe price id>
-MARKET_STUDY_PRICE_DEFAULT_DISPLAY=$49 USD
+MARKET_STUDY_PRICE_DEFAULT_DISPLAY=$29 USD
 MARKET_STUDY_PRICE_DEFAULT_CURRENCY=USD
 ```
 
@@ -74,6 +76,5 @@ If regional Price IDs are not configured, the resolver falls back to the global/
 
 ## Open decisions
 
-- Whether LATAM should remain `$29 USD` or move to a MXN-denominated price such as `$499 MXN`.
 - Whether to add a manual “wrong region?” support flow or promo code fallback.
 - Whether to expose region label in UI or keep it to Stripe metadata/support.

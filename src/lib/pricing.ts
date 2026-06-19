@@ -44,9 +44,9 @@ function regionForCountry(country: string): PricingRegion {
 
 function defaultMarketStudy(): ProductPricing {
   return {
-    display: env("MARKET_STUDY_PRICE_DEFAULT_DISPLAY") || "$49 USD",
+    display: env("MARKET_STUDY_PRICE_DEFAULT_DISPLAY") || env("MARKET_STUDY_PRICE_DISPLAY") || "$29 USD",
     priceId: env("MARKET_STUDY_PRICE_DEFAULT_ID") || env("MARKET_STUDY_PRICE_ID"),
-    currency: env("MARKET_STUDY_PRICE_DEFAULT_CURRENCY") || "USD",
+    currency: env("MARKET_STUDY_PRICE_DEFAULT_CURRENCY") || env("MARKET_STUDY_PRICE_CURRENCY") || "USD",
     regionLabel: "Global",
   };
 }
@@ -59,9 +59,9 @@ function resolveMarketStudy(region: PricingRegion): ProductPricing {
     if (!regionalPriceId) return fallback;
 
     return {
-      display: env("MARKET_STUDY_PRICE_LATAM_DISPLAY") || "$29 USD",
+      display: env("MARKET_STUDY_PRICE_LATAM_DISPLAY") || "$399 MXN",
       priceId: regionalPriceId,
-      currency: env("MARKET_STUDY_PRICE_LATAM_CURRENCY") || "USD",
+      currency: env("MARKET_STUDY_PRICE_LATAM_CURRENCY") || "MXN",
       regionLabel: "Mexico/LATAM",
     };
   }
@@ -71,7 +71,7 @@ function resolveMarketStudy(region: PricingRegion): ProductPricing {
     if (!regionalPriceId) return fallback;
 
     return {
-      display: env("MARKET_STUDY_PRICE_US_DISPLAY") || "$49 USD",
+      display: env("MARKET_STUDY_PRICE_US_DISPLAY") || "$29 USD",
       priceId: regionalPriceId,
       currency: env("MARKET_STUDY_PRICE_US_CURRENCY") || "USD",
       regionLabel: "US/Canada",

@@ -25,7 +25,7 @@ export const t = {
     upsellTitle: "Want the full market study?",
     upsellDesc:
       "Competitors, market size (TAM/SAM/SOM), pricing strategy, audience personas, financial projections, and a go-to-market plan — backed by real market data.",
-    upsellButton: "Get Full Study — $49 USD",
+    upsellButton: "Get Full Study",
     shareScore: "Share my score",
     hideIdea: "Hide my idea",
     hideIdeaHint: "Share your score without revealing details",
@@ -68,7 +68,7 @@ export const t = {
     upsellTitle: "¿Quieres el estudio de mercado completo?",
     upsellDesc:
       "Competidores, tamaño de mercado (TAM/SAM/SOM), estrategia de precios, perfiles de audiencia, proyecciones financieras y plan de lanzamiento — respaldado con datos reales de mercado.",
-    upsellButton: "Obtener Estudio Completo — $49 USD",
+    upsellButton: "Obtener Estudio Completo",
     shareScore: "Compartir mi puntuación",
     hideIdea: "Ocultar mi idea",
     hideIdeaHint: "Comparte tu puntuación sin revelar detalles",

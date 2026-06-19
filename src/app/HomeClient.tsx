@@ -560,6 +560,10 @@ export default function HomeClient() {
   const turnstileWidgetIdRef = useRef<string | null>(null);
 
   const s = t[lang];
+  const marketStudyPriceDisplay = pricing?.marketStudy.display || "$29 USD";
+  const marketStudyUpsellButton = lang === "es"
+    ? `Obtener Estudio Completo — ${marketStudyPriceDisplay}`
+    : `Get Full Study — ${marketStudyPriceDisplay}`;
   const isCurrentPro = Boolean(userSession?.isPro || userProfile?.is_pro || evaluationMeta?.isPro);
   const isProfileHydrating = Boolean(userSession && userProfile === null);
   const showHeaderUpgradeCta = !isProfileHydrating && !isCurrentPro;
@@ -1931,7 +1935,7 @@ export default function HomeClient() {
                       {lang === "es" ? "Redirigiendo al pago..." : "Redirecting to checkout..."}
                     </span>
                   ) : (
-                    s.upsellButton
+                    marketStudyUpsellButton
                   )}
                 </button>
               </div>

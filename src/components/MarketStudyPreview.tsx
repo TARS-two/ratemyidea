@@ -79,7 +79,7 @@ function PlaceholderLines() {
 export default function MarketStudyPreview({ lang, result, loading, pricing, onClose, onCheckout }: MarketStudyPreviewProps) {
   const isEs = lang === "es";
   const primaryRisk = result.risks[0] || (isEs ? "Validar demanda real antes de escalar." : "Validate real demand before scaling.");
-  const marketStudyPrice = pricing?.marketStudy.display || "$49 USD";
+  const marketStudyPrice = pricing?.marketStudy.display || "$29 USD";
 
   return (
     <div

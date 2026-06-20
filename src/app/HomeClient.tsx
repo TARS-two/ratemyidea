@@ -168,7 +168,7 @@ function ScoreRing({ score }: { score: number }) {
         : "var(--accent-red)";
 
   return (
-    <div className="relative w-36 h-36 mx-auto">
+    <div className="relative mx-auto h-44 w-44 sm:h-48 sm:w-48">
       <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
         <circle
           cx="50"
@@ -176,7 +176,7 @@ function ScoreRing({ score }: { score: number }) {
           r="45"
           fill="none"
           stroke="var(--surface-light)"
-          strokeWidth="6"
+          strokeWidth="7"
         />
         <circle
           cx="50"
@@ -184,7 +184,7 @@ function ScoreRing({ score }: { score: number }) {
           r="45"
           fill="none"
           stroke={color}
-          strokeWidth="6"
+          strokeWidth="7"
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
@@ -193,10 +193,10 @@ function ScoreRing({ score }: { score: number }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-4xl font-bold" style={{ color }}>
+        <span className="text-5xl font-bold sm:text-6xl" style={{ color }}>
           {score.toFixed(1)}
         </span>
-        <span className="text-xs text-[var(--text-muted)]">/ 10</span>
+        <span className="text-sm font-semibold text-[var(--text-muted)]">/ 10</span>
       </div>
     </div>
   );
@@ -1609,17 +1609,14 @@ export default function HomeClient() {
               )}
 
               {/* Score card + share actions */}
-              <div data-testid="score-share-card" className="bg-[var(--surface)] border border-white/10 rounded-2xl p-6 text-center sm:p-8">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--electric-light)]">
-                  {lang === "es" ? "Comparte tu score" : "Share your score"}
-                </p>
-                <p className="text-sm text-[var(--text-muted)] uppercase tracking-wider mb-4">
+              <div data-testid="score-share-card" className="bg-[var(--surface)] border border-white/10 rounded-2xl p-6 text-center sm:p-9">
+                <p className="mb-5 text-base font-bold uppercase tracking-[0.22em] text-[var(--text-muted)] sm:text-lg">
                   {s.yourScore}
                 </p>
                 {result.badge && (
-                  <div className="flex justify-center mb-4">
+                  <div className="mb-5 flex justify-center">
                     <span
-                      className="text-sm font-bold px-4 py-1.5 rounded-full"
+                      className="rounded-full px-5 py-2 text-base font-bold"
                       style={{ color: result.badge.color, backgroundColor: result.badge.bg, border: `1px solid ${result.badge.color}40` }}
                     >
                       {result.badge.emoji} {result.badge.label}
@@ -1628,45 +1625,42 @@ export default function HomeClient() {
                 )}
                 <ScoreRing score={result.overall} />
 
-                <div className="mt-5 space-y-4">
-                  <div className="mx-auto max-w-md rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                      {lang === "es" ? "Idea" : "Idea"}
-                    </p>
-                    <p className="mt-1 truncate text-sm font-bold text-[var(--text-primary)]">
-                      {hideIdea ? (lang === "es" ? "Idea oculta" : "Idea hidden") : result.ideaName}
-                    </p>
-                  </div>
+                <div className="mt-6 space-y-4">
+                  <h2 className="mx-auto max-w-2xl truncate text-xl font-bold text-[var(--text-primary)] sm:text-2xl">
+                    {hideIdea ? (lang === "es" ? "🔒 Idea oculta" : "🔒 Idea hidden") : result.ideaName}
+                  </h2>
 
-                  <label className="mx-auto flex max-w-md items-center justify-center gap-3 text-sm text-[var(--text-secondary)]">
-                    <input
-                      type="checkbox"
-                      checked={hideIdea}
-                      onChange={(e) => setHideIdea(e.target.checked)}
-                      className="h-4 w-4 accent-[var(--electric)]"
-                    />
-                    {lang === "es" ? "Ocultar idea" : "Hide idea"}
-                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setHideIdea((value) => !value)}
+                    aria-pressed={hideIdea}
+                    className="mx-auto inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-black/20 px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] transition-all hover:border-[var(--electric)]/40 hover:text-[var(--text-primary)] cursor-pointer"
+                  >
+                    <span aria-hidden="true">{hideIdea ? "🔓" : "🔒"}</span>
+                    {hideIdea
+                      ? (lang === "es" ? "Mostrar idea" : "Show idea")
+                      : (lang === "es" ? "Ocultar idea" : "Hide idea")}
+                  </button>
 
-                  <div className="mx-auto grid max-w-md gap-2 sm:grid-cols-3">
+                  <div className="mx-auto grid max-w-sm gap-2 sm:grid-cols-3">
                     <button
                       onClick={() => handleShareWithImage()}
                       aria-label={lang === "es" ? "Compartir score card" : "Share score card"}
-                      className="rounded-xl bg-[var(--electric)] px-4 py-3 text-sm font-bold text-white transition-all hover:bg-[var(--electric-dark)] hover:shadow-[0_0_24px_rgba(108,58,255,0.35)] cursor-pointer"
+                      className="rounded-xl bg-[var(--electric)] px-3 py-2 text-xs font-bold text-white transition-all hover:bg-[var(--electric-dark)] hover:shadow-[0_0_20px_rgba(108,58,255,0.3)] cursor-pointer"
                     >
                       📤 {lang === "es" ? "Compartir" : "Share"}
                     </button>
                     <button
                       onClick={handleDownloadImage}
                       aria-label={lang === "es" ? "Descargar imagen de score card" : "Download score card image"}
-                      className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-semibold text-[var(--text-primary)] transition-all hover:border-[var(--electric)]/40 cursor-pointer"
+                      className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-all hover:border-[var(--electric)]/40 cursor-pointer"
                     >
                       ⬇️ {lang === "es" ? "Descargar" : "Download"}
                     </button>
                     <button
                       onClick={handleCopyText}
                       aria-label={lang === "es" ? "Copiar link y texto" : "Copy link and text"}
-                      className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-semibold text-[var(--text-primary)] transition-all hover:border-[var(--electric)]/40 cursor-pointer"
+                      className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-all hover:border-[var(--electric)]/40 cursor-pointer"
                     >
                       🔗 {lang === "es" ? "Copiar" : "Copy"}
                     </button>

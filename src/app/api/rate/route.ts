@@ -625,7 +625,7 @@ export async function POST(request: NextRequest) {
     const anthropicStartedAt = Date.now();
     const aiRes = await fetchAnthropicWithTimeout({
       model: BASIC_EVALUATION_MODEL,
-      max_tokens: 1500,
+      max_tokens: 2600,
       system: SYSTEM_PROMPT,
       messages: [
         {

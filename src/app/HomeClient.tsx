@@ -1608,8 +1608,11 @@ export default function HomeClient() {
                 </section>
               )}
 
-              {/* Overall Score */}
-              <div className="bg-[var(--surface)] border border-white/10 rounded-2xl p-8 text-center">
+              {/* Score card + share actions */}
+              <div data-testid="score-share-card" className="bg-[var(--surface)] border border-white/10 rounded-2xl p-6 text-center sm:p-8">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--electric-light)]">
+                  {lang === "es" ? "Comparte tu score" : "Share your score"}
+                </p>
                 <p className="text-sm text-[var(--text-muted)] uppercase tracking-wider mb-4">
                   {s.yourScore}
                 </p>
@@ -1624,7 +1627,55 @@ export default function HomeClient() {
                   </div>
                 )}
                 <ScoreRing score={result.overall} />
-                <p className="mt-4 text-[var(--text-secondary)] max-w-md mx-auto">
+
+                <div className="mt-5 space-y-4">
+                  <div className="mx-auto max-w-md rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      {lang === "es" ? "Idea" : "Idea"}
+                    </p>
+                    <p className="mt-1 truncate text-sm font-bold text-[var(--text-primary)]">
+                      {hideIdea ? (lang === "es" ? "Idea oculta" : "Idea hidden") : result.ideaName}
+                    </p>
+                  </div>
+
+                  <label className="mx-auto flex max-w-md items-center justify-center gap-3 text-sm text-[var(--text-secondary)]">
+                    <input
+                      type="checkbox"
+                      checked={hideIdea}
+                      onChange={(e) => setHideIdea(e.target.checked)}
+                      className="h-4 w-4 accent-[var(--electric)]"
+                    />
+                    {lang === "es" ? "Ocultar idea" : "Hide idea"}
+                  </label>
+
+                  <div className="mx-auto grid max-w-md gap-2 sm:grid-cols-3">
+                    <button
+                      onClick={() => handleShareWithImage()}
+                      aria-label={lang === "es" ? "Compartir score card" : "Share score card"}
+                      className="rounded-xl bg-[var(--electric)] px-4 py-3 text-sm font-bold text-white transition-all hover:bg-[var(--electric-dark)] hover:shadow-[0_0_24px_rgba(108,58,255,0.35)] cursor-pointer"
+                    >
+                      📤 {lang === "es" ? "Compartir" : "Share"}
+                    </button>
+                    <button
+                      onClick={handleDownloadImage}
+                      aria-label={lang === "es" ? "Descargar imagen de score card" : "Download score card image"}
+                      className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-semibold text-[var(--text-primary)] transition-all hover:border-[var(--electric)]/40 cursor-pointer"
+                    >
+                      ⬇️ {lang === "es" ? "Descargar" : "Download"}
+                    </button>
+                    <button
+                      onClick={handleCopyText}
+                      aria-label={lang === "es" ? "Copiar link y texto" : "Copy link and text"}
+                      className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-semibold text-[var(--text-primary)] transition-all hover:border-[var(--electric)]/40 cursor-pointer"
+                    >
+                      🔗 {lang === "es" ? "Copiar" : "Copy"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-[var(--surface)] border border-white/10 rounded-2xl p-6 text-center">
+                <p className="text-[var(--text-secondary)] max-w-2xl mx-auto">
                   {result.summary}
                 </p>
               </div>
@@ -1639,69 +1690,6 @@ export default function HomeClient() {
 
               {result.basicBenchmark && (
                 <BasicBenchmarkCard benchmark={result.basicBenchmark} userScore={result.overall} lang={lang} />
-              )}
-
-              {!isCurrentPro && (
-                <section data-testid="inline-share-card-preview" className="rounded-3xl border border-[var(--electric)]/20 bg-gradient-to-br from-[var(--surface)] via-[var(--surface)] to-[var(--electric)]/10 p-4 shadow-xl shadow-black/10 sm:p-5">
-                  <div className="grid gap-4 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1fr)] lg:items-center">
-                    <div className="mx-auto w-full max-w-[20rem] overflow-hidden rounded-2xl border border-white/10 bg-black/20 lg:max-w-none">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        key={`inline-${hideIdea ? "hidden" : "visible"}`}
-                        src={getShareCardUrl()}
-                        alt="Share card preview"
-                        width={1080}
-                        height={1080}
-                        className="block h-auto w-full"
-                      />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--electric-light)]">
-                        {lang === "es" ? "Comparte tu score" : "Share your score"}
-                      </p>
-                      <h3 className="mt-2 text-xl font-black text-[var(--text-primary)]">
-                        {lang === "es" ? "Tu card está lista" : "Your card is ready"}
-                      </h3>
-                      <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-                        {lang === "es"
-                          ? "Una versión limpia de tu score. Puedes ocultar el nombre de la idea antes de compartir."
-                          : "A clean version of your score. You can hide the idea name before sharing."}
-                      </p>
-                      <label className="mt-4 flex items-center gap-3 text-sm text-[var(--text-secondary)]">
-                        <input
-                          type="checkbox"
-                          checked={hideIdea}
-                          onChange={(e) => setHideIdea(e.target.checked)}
-                          className="h-4 w-4 accent-[var(--electric)]"
-                        />
-                        {lang === "es" ? "Ocultar nombre de la idea" : "Hide idea name"}
-                      </label>
-                      <div className="mt-5 grid gap-2 sm:grid-cols-3">
-                        <button
-                          onClick={() => handleShareWithImage()}
-                          aria-label={lang === "es" ? "Compartir score card" : "Share score card"}
-                          className="rounded-xl bg-[var(--electric)] px-4 py-3 text-sm font-bold text-white transition-all hover:bg-[var(--electric-dark)] hover:shadow-[0_0_24px_rgba(108,58,255,0.35)] cursor-pointer"
-                        >
-                          📤 {lang === "es" ? "Compartir" : "Share"}
-                        </button>
-                        <button
-                          onClick={handleDownloadImage}
-                          aria-label={lang === "es" ? "Descargar imagen de score card" : "Download score card image"}
-                          className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-semibold text-[var(--text-primary)] transition-all hover:border-[var(--electric)]/40 cursor-pointer"
-                        >
-                          ⬇️ {lang === "es" ? "Descargar" : "Download"}
-                        </button>
-                        <button
-                          onClick={handleCopyText}
-                          aria-label={lang === "es" ? "Copiar link y texto" : "Copy link and text"}
-                          className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-semibold text-[var(--text-primary)] transition-all hover:border-[var(--electric)]/40 cursor-pointer"
-                        >
-                          🔗 {lang === "es" ? "Copiar" : "Copy"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </section>
               )}
 
               {/* Strengths & Risks */}
@@ -1869,53 +1857,58 @@ export default function HomeClient() {
                         ))}
                       </div>
 
-                      {/* mini benchmark preview */}
-                      <div className="relative rounded-2xl border border-amber-300/20 bg-black/25 p-4">
-                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-transparent via-black/5 to-black/25" />
-                        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                          <div className="lg:max-w-[45%]">
-                            <div className="mb-3 flex items-center gap-3">
-                              <span className="text-xs font-bold uppercase tracking-[0.16em] text-amber-200">
-                                {lang === "es" ? "Benchmark Pro" : "Pro benchmark"}
-                              </span>
-                              <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-bold text-amber-100">
-                                {lang === "es" ? "Bloqueado" : "Locked"}
-                              </span>
-                            </div>
-                            <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-                              {lang === "es"
-                                ? "Desbloquea comparación por categoría, puntos fuertes/débiles y próximos pasos accionables."
-                                : "Unlock category comparison, stronger/weaker signals, and actionable next steps."}
-                            </p>
-                            <p className="mt-3 inline-flex rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-xs font-bold text-amber-100">
-                              {lang === "es" ? "$9 USD/mes · cancela cuando quieras" : "$9/mo · cancel anytime"}
-                            </p>
-                          </div>
-
-                          <div className="min-w-0 flex-1 space-y-2 blur-[1px]">
-                            <div className="h-2 rounded-full bg-[var(--electric)]/80" style={{ width: "82%" }} />
-                            <div className="h-2 rounded-full bg-amber-300/70" style={{ width: "64%" }} />
-                            <div className="mt-3 grid grid-cols-2 gap-2">
-                              <div className="h-12 rounded-xl bg-green-400/10" />
-                              <div className="h-12 rounded-xl bg-amber-300/10" />
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={startProCheckout}
-                            disabled={proCheckoutLoading}
-                            className="w-full rounded-2xl bg-[var(--electric)] px-6 py-4 text-base font-black text-white shadow-lg shadow-[var(--electric)]/25 transition-all hover:-translate-y-0.5 hover:bg-[var(--electric-dark)] hover:shadow-[0_0_32px_rgba(108,58,255,0.45)] disabled:opacity-50 cursor-pointer lg:w-auto lg:min-w-56"
-                          >
-                            {proCheckoutLoading
-                              ? (lang === "es" ? "Redirigiendo..." : "Redirecting...")
-                              : (lang === "es" ? "Mejorar con Pro" : "Unlock Pro analysis")}
-                          </button>
-                        </div>
+                      <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">
+                          {lang === "es" ? "$9 USD/mes · cancela cuando quieras" : "$9/mo · cancel anytime"}
+                        </p>
+                        <button
+                          onClick={startProCheckout}
+                          disabled={proCheckoutLoading}
+                          className="w-full rounded-2xl bg-[var(--electric)] px-6 py-4 text-base font-black text-white shadow-lg shadow-[var(--electric)]/25 transition-all hover:-translate-y-0.5 hover:bg-[var(--electric-dark)] hover:shadow-[0_0_32px_rgba(108,58,255,0.45)] disabled:opacity-50 cursor-pointer sm:w-auto sm:min-w-56"
+                        >
+                          {proCheckoutLoading
+                            ? (lang === "es" ? "Redirigiendo..." : "Redirecting...")
+                            : (lang === "es" ? "Mejorar con Pro" : "Unlock Pro analysis")}
+                        </button>
                       </div>
                     </div>
                   </section>
                 );
               })()}
+
+              {!isCurrentPro && (
+                <section data-testid="locked-pro-benchmark-preview" className="rounded-3xl border border-amber-300/20 bg-[var(--surface)] p-5 shadow-xl shadow-black/10">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="lg:max-w-[42%]">
+                      <div className="mb-3 flex items-center gap-3">
+                        <span className="text-xs font-bold uppercase tracking-[0.16em] text-amber-200">
+                          {lang === "es" ? "Benchmark Pro" : "Pro benchmark"}
+                        </span>
+                        <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-bold text-amber-100">
+                          {lang === "es" ? "Bloqueado" : "Locked"}
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-black text-[var(--text-primary)]">
+                        {lang === "es" ? "Comparación avanzada" : "Advanced comparison"}
+                      </h3>
+                      <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+                        {lang === "es"
+                          ? "Compara tu idea contra patrones similares, puntos fuertes/débiles y palancas de mejora."
+                          : "Compare your idea against similar patterns, stronger/weaker signals, and improvement levers."}
+                      </p>
+                    </div>
+
+                    <div className="min-w-0 flex-1 space-y-2 rounded-2xl border border-white/10 bg-black/20 p-4 blur-[1px]">
+                      <div className="h-2 rounded-full bg-[var(--electric)]/80" style={{ width: "82%" }} />
+                      <div className="h-2 rounded-full bg-amber-300/70" style={{ width: "64%" }} />
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div className="h-12 rounded-xl bg-green-400/10" />
+                        <div className="h-12 rounded-xl bg-amber-300/10" />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
 
               {/* Upsell — Market Study */}
               <div className="bg-gradient-to-r from-[var(--electric)]/20 to-purple-500/20 border border-[var(--electric)]/30 rounded-2xl p-6 text-center">

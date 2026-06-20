@@ -89,9 +89,9 @@ assert(home.includes('freeEvaluationsUsed'), 'Result flow should know whether th
 assert(home.includes('canClaimShareCredit'), 'Share CTA should show +1 free evaluation only when the user can claim it.');
 assert(home.includes('claimShareCreditAfterAuth'), 'Anonymous share-credit claims should route through auth before granting persistent credit.');
 assert(home.includes('startExtraEvaluationCheckout()'), 'After the free evaluation, the secondary CTA should start paid extra-evaluation checkout instead of making Pro the only path.');
-assert(home.includes('Buy one more evaluation'), 'English final free-evaluation CTA copy should offer a simple paid extra evaluation.');
-assert(home.includes('Comprar otra evaluación'), 'Spanish final free-evaluation CTA copy should offer a simple paid extra evaluation.');
-assert(home.includes('+1 free evaluation') && home.includes('+1 evaluación gratis'), 'Share CTA should communicate the +1 evaluation incentive in both languages.');
+assert(home.includes('Buy another') && home.includes('$1 USD'), 'English final free-evaluation CTA copy should stay compact while preserving the paid price signal.');
+assert(home.includes('Comprar otra') && home.includes('$1 USD'), 'Spanish final free-evaluation CTA copy should stay compact while preserving the paid price signal.');
+assert(home.includes('+1 free evaluation') && home.includes('+1 evaluación gratis') && home.includes('role="tooltip"') && home.includes('group-hover:opacity-100'), 'Share CTA should move the +1 evaluation incentive into a hover/focus tooltip instead of crowding the button label.');
 assert(home.includes('handlePostShareCreditClaim'), 'Share image should automatically route eligible users into +1 claim after sharing.');
 assert(home.includes('PENDING_SHARE_CREDIT_KEY'), 'Share-credit claim intent should persist through email confirmation redirects.');
 assert(home.includes('localStorage.setItem(PENDING_SHARE_CREDIT_KEY'), 'Anonymous share-credit claim should be stored before opening signup.');
@@ -101,7 +101,7 @@ assert(!home.includes('Claim +1 free evaluation'), 'Share modal should not rende
 assert(shareCreditRoute.includes('granted: true') && shareCreditRoute.includes('granted: false'), 'Share-credit API should tell the UI whether a new credit was actually granted.');
 
 assert(rateRoute.includes('const FREE_LIMIT = 1'), '/api/rate should allow exactly one free basic evaluation before share or paid extra-eval paths.');
-assert(home.includes('startExtraEvaluationCheckout') && home.includes('Buy one more evaluation') && home.includes('Comprar otra evaluación'), 'Daily-limit result actions should offer a simple paid extra evaluation instead of making Pro the only next step.');
+assert(home.includes('startExtraEvaluationCheckout') && home.includes('Buy another') && home.includes('Comprar otra'), 'Daily-limit result actions should offer a simple paid extra evaluation instead of making Pro the only next step.');
 assert(home.includes('extraEvalCheckoutLoading') && home.includes('params.get("extra_eval") === "success"'), 'Home should track paid extra-evaluation checkout separately and confirm it on Stripe return.');
 assert(extraEvalCheckoutRoute.includes('STRIPE_EXTRA_EVAL_PRICE_ID') && extraEvalCheckoutRoute.includes('mode: "payment"') && extraEvalCheckoutRoute.includes('purchaseType: "extra_evaluation"'), 'Extra evaluation checkout route should create a one-time Stripe payment with explicit metadata.');
 assert(extraEvalConfirmRoute.includes('stripe.checkout.sessions.retrieve') && extraEvalConfirmRoute.includes('increment_extra_credit') && extraEvalConfirmRoute.includes('purchaseType') && extraEvalConfirmRoute.includes('extra_evaluation'), 'Extra evaluation confirm route should verify Stripe checkout and increment user extra_credits through the idempotent credit RPC.');
@@ -183,7 +183,7 @@ assert(!home.includes('lg:grid-cols-[minmax(0,1fr)_22rem]'), 'Pro upsell should 
 assert(home.includes('hover:shadow-[0_0_32px_rgba(108,58,255,0.45)]') && home.includes('hover:-translate-y-0.5'), 'Pro CTA should be larger and glow/lift on hover.');
 assert(home.includes('hover:shadow-[0_0_32px_rgba(108,58,255,0.45)]') && marketStudyPreview.includes('hover:shadow-[0_0_32px_rgba(108,58,255,0.45)]'), 'Market Study checkout CTA should share the hover glow treatment.');
 assert(!home.includes('✓ {lang === "es" ? "Evaluaciones ilimitadas"') && !home.includes('Benchmark vs otras ideas'), 'Free result Pro upsell should not use the old generic feature checklist.');
-assert(home.includes('🧾') && home.includes('Buy one more evaluation · $1.00 USD') && home.includes('Comprar otra evaluación · $1.00 USD'), 'Paid extra-evaluation CTA should look productized with an icon and explicit currency/decimals.');
+assert(home.includes('Buy another') && home.includes('Comprar otra') && home.includes('rounded-full bg-white/15') && !home.includes('Buy one more evaluation · $1.00 USD') && !home.includes('Comprar otra evaluación · $1.00 USD'), 'Paid extra-evaluation CTA should be a compact action plus small price badge, not a long sentence inside the button.');
 assert(home.includes('CHECKOUT_RESULT_KEY') && home.includes('persistCurrentResultForCheckout') && home.includes('restoreCurrentResultFromCheckout'), 'Checkout redirects should preserve the open analysis so cancel/back from Stripe does not reset the page.');
 assert(home.includes('setEvaluationMeta(saved.evaluationMeta || null);\n      sessionStorage.removeItem(CHECKOUT_RESULT_KEY);'), 'Checkout result restoration should be one-shot so refresh/logo reset can return to the new-idea form instead of reviving stale analyses forever.');
 assert(marketStudyPreview.includes('Market Study adds deeper research') && marketStudyPreview.includes('El Market Study agrega investigación más profunda'), 'Market Study preview should include a small outside-the-PDF explainer/diagram contrasting basic analysis with deeper research.');

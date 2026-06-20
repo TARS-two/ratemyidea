@@ -1973,33 +1973,47 @@ export default function HomeClient() {
 
               {/* Share + Try Again */}
               <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={() => setShowShareModal(true)}
-                  className="flex-1 py-3 bg-[var(--surface)] border border-white/10 rounded-xl text-[var(--text-primary)] font-medium hover:border-[var(--electric)]/50 transition-all cursor-pointer"
-                >
-                  📤 {s.shareScore}
+                <div className="group relative flex-1">
+                  <button
+                    onClick={() => setShowShareModal(true)}
+                    aria-describedby={canClaimShareCredit ? "share-credit-tooltip" : undefined}
+                    className="w-full rounded-xl border border-white/10 bg-[var(--surface)] px-5 py-3 font-medium text-[var(--text-primary)] transition-all hover:border-[var(--electric)]/50 hover:bg-white/5 cursor-pointer"
+                  >
+                    📤 {s.shareScore}
+                  </button>
                   {canClaimShareCredit && (
-                    <span className="ml-2 text-green-400 text-sm font-semibold">
+                    <span
+                      id="share-credit-tooltip"
+                      role="tooltip"
+                      className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 whitespace-nowrap rounded-full border border-green-400/25 bg-green-400/10 px-3 py-1 text-xs font-semibold text-green-300 opacity-0 shadow-lg shadow-black/20 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                    >
                       {lang === "es" ? "+1 evaluación gratis" : "+1 free evaluation"}
                     </span>
                   )}
-                </button>
+                </div>
                 <button
                   onClick={shouldShowFinalFreeCta ? () => startExtraEvaluationCheckout() : handleReset}
-                  className={`flex-1 py-3 border rounded-xl font-medium transition-all cursor-pointer
+                  className={`flex-1 rounded-xl border px-5 py-3 font-medium transition-all cursor-pointer
                     ${shouldShowFinalFreeCta
-                      ? "bg-[var(--electric)] border-[var(--electric)] text-white hover:bg-[var(--electric-dark)]"
-                      : "bg-[var(--surface)] border-white/10 text-[var(--text-primary)] hover:border-[var(--electric)]/50"}
+                      ? "bg-[var(--electric)] border-[var(--electric)] text-white hover:bg-[var(--electric-dark)] hover:shadow-[0_0_24px_rgba(108,58,255,0.35)]"
+                      : "bg-[var(--surface)] border-white/10 text-[var(--text-primary)] hover:border-[var(--electric)]/50 hover:bg-white/5"}
                   `}
                   disabled={extraEvalCheckoutLoading}
                 >
-                  <div className="flex items-center justify-center gap-2">
+                  <span className="flex items-center justify-center gap-2">
                     {shouldShowFinalFreeCta ? (
-                      <>{extraEvalCheckoutLoading ? (lang === "es" ? "Redirigiendo..." : "Redirecting...") : (lang === "es" ? "🧾 Comprar otra evaluación · $1.00 USD" : "🧾 Buy one more evaluation · $1.00 USD")}</>
+                      extraEvalCheckoutLoading ? (
+                        lang === "es" ? "Redirigiendo..." : "Redirecting..."
+                      ) : (
+                        <>
+                          <span>{lang === "es" ? "Comprar otra" : "Buy another"}</span>
+                          <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-bold">$1 USD</span>
+                        </>
+                      )
                     ) : (
                       <>🔄 {s.rateAnother}</>
                     )}
-                  </div>
+                  </span>
                 </button>
               </div>
             </div>

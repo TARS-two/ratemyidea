@@ -1642,9 +1642,9 @@ export default function HomeClient() {
               )}
 
               {!isCurrentPro && (
-                <section data-testid="inline-share-card-preview" className="rounded-3xl border border-[var(--electric)]/20 bg-gradient-to-br from-[var(--surface)] via-[var(--surface)] to-[var(--electric)]/10 p-5 shadow-xl shadow-black/10">
-                  <div className="grid gap-5 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1fr)] lg:items-center">
-                    <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/20">
+                <section data-testid="inline-share-card-preview" className="rounded-3xl border border-[var(--electric)]/20 bg-gradient-to-br from-[var(--surface)] via-[var(--surface)] to-[var(--electric)]/10 p-4 shadow-xl shadow-black/10 sm:p-5">
+                  <div className="grid gap-4 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1fr)] lg:items-center">
+                    <div className="mx-auto w-full max-w-[20rem] overflow-hidden rounded-2xl border border-white/10 bg-black/20 lg:max-w-none">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         key={`inline-${hideIdea ? "hidden" : "visible"}`}
@@ -1660,12 +1660,12 @@ export default function HomeClient() {
                         {lang === "es" ? "Comparte tu score" : "Share your score"}
                       </p>
                       <h3 className="mt-2 text-xl font-black text-[var(--text-primary)]">
-                        {lang === "es" ? "Tu score card ya está lista" : "Your score card is ready"}
+                        {lang === "es" ? "Tu card está lista" : "Your card is ready"}
                       </h3>
                       <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
                         {lang === "es"
-                          ? "Comparte una versión limpia de la evaluación sin saturar el resultado. Puedes ocultar el nombre de la idea antes de compartir."
-                          : "Share a clean version of the evaluation without crowding the result. You can hide the idea name before sharing."}
+                          ? "Una versión limpia de tu score. Puedes ocultar el nombre de la idea antes de compartir."
+                          : "A clean version of your score. You can hide the idea name before sharing."}
                       </p>
                       <label className="mt-4 flex items-center gap-3 text-sm text-[var(--text-secondary)]">
                         <input
@@ -1679,21 +1679,24 @@ export default function HomeClient() {
                       <div className="mt-5 grid gap-2 sm:grid-cols-3">
                         <button
                           onClick={() => handleShareWithImage()}
-                          className="rounded-xl bg-[var(--electric)] px-4 py-3 text-sm font-bold text-white transition-all hover:bg-[var(--electric-dark)] cursor-pointer"
+                          aria-label={lang === "es" ? "Compartir score card" : "Share score card"}
+                          className="rounded-xl bg-[var(--electric)] px-4 py-3 text-sm font-bold text-white transition-all hover:bg-[var(--electric-dark)] hover:shadow-[0_0_24px_rgba(108,58,255,0.35)] cursor-pointer"
                         >
-                          📤 {lang === "es" ? "Compartir card" : "Share card"}
+                          📤 {lang === "es" ? "Compartir" : "Share"}
                         </button>
                         <button
                           onClick={handleDownloadImage}
+                          aria-label={lang === "es" ? "Descargar imagen de score card" : "Download score card image"}
                           className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-semibold text-[var(--text-primary)] transition-all hover:border-[var(--electric)]/40 cursor-pointer"
                         >
-                          ⬇️ {lang === "es" ? "Descargar imagen" : "Download image"}
+                          ⬇️ {lang === "es" ? "Descargar" : "Download"}
                         </button>
                         <button
                           onClick={handleCopyText}
+                          aria-label={lang === "es" ? "Copiar link y texto" : "Copy link and text"}
                           className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-semibold text-[var(--text-primary)] transition-all hover:border-[var(--electric)]/40 cursor-pointer"
                         >
-                          🔗 {lang === "es" ? "Copiar link/texto" : "Copy link/text"}
+                          🔗 {lang === "es" ? "Copiar" : "Copy"}
                         </button>
                       </div>
                     </div>

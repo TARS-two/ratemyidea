@@ -1609,14 +1609,14 @@ export default function HomeClient() {
               )}
 
               {/* Score card + share actions */}
-              <div data-testid="score-share-card" className="bg-[var(--surface)] border border-white/10 rounded-2xl p-6 text-center sm:p-9">
-                <p className="mb-5 text-base font-bold uppercase tracking-[0.22em] text-[var(--text-muted)] sm:text-lg">
+              <div data-testid="score-share-card" className="bg-[var(--surface)] border border-white/10 rounded-3xl p-6 text-center shadow-xl shadow-black/10 sm:p-8">
+                <p className="mb-4 text-xs font-bold uppercase tracking-[0.22em] text-[var(--text-muted)]">
                   {s.yourScore}
                 </p>
                 {result.badge && (
                   <div className="mb-5 flex justify-center">
                     <span
-                      className="rounded-full px-5 py-2 text-base font-bold"
+                      className="rounded-full px-4 py-1.5 text-sm font-bold"
                       style={{ color: result.badge.color, backgroundColor: result.badge.bg, border: `1px solid ${result.badge.color}40` }}
                     >
                       {result.badge.emoji} {result.badge.label}
@@ -1630,39 +1630,34 @@ export default function HomeClient() {
                     {hideIdea ? (lang === "es" ? "🔒 Idea oculta" : "🔒 Idea hidden") : result.ideaName}
                   </h2>
 
-                  <button
-                    type="button"
-                    onClick={() => setHideIdea((value) => !value)}
-                    aria-pressed={hideIdea}
-                    className="mx-auto inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-black/20 px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] transition-all hover:border-[var(--electric)]/40 hover:text-[var(--text-primary)] cursor-pointer"
-                  >
-                    <span aria-hidden="true">{hideIdea ? "🔓" : "🔒"}</span>
-                    {hideIdea
-                      ? (lang === "es" ? "Mostrar idea" : "Show idea")
-                      : (lang === "es" ? "Ocultar idea" : "Hide idea")}
-                  </button>
+                  <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+                    <label className="scoreHideIdeaToggle group inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 transition-all hover:-translate-y-0.5 hover:border-[var(--electric)]/40 hover:bg-white/5">
+                      <span className="relative inline-flex h-6 w-11 items-center">
+                        <input
+                          type="checkbox"
+                          checked={hideIdea}
+                          onChange={(e) => setHideIdea(e.target.checked)}
+                          aria-label={hideIdea ? (lang === "es" ? "Mostrar idea" : "Show idea") : (lang === "es" ? "Ocultar idea" : "Hide idea")}
+                          className="sr-only peer"
+                        />
+                        <span className="absolute inset-0 rounded-full border border-white/10 bg-[var(--surface-light)] transition-colors peer-checked:bg-[var(--electric)]" />
+                        <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
+                      </span>
+                      <span className="text-xs font-semibold text-[var(--text-secondary)] transition-colors group-hover:text-[var(--text-primary)]">
+                        <span aria-hidden="true">{hideIdea ? "🔓" : "🔒"}</span>{" "}
+                        {hideIdea
+                          ? (lang === "es" ? "Mostrar idea" : "Show idea")
+                          : (lang === "es" ? "Ocultar idea" : "Hide idea")}
+                      </span>
+                    </label>
 
-                  <div className="mx-auto grid max-w-sm gap-2 sm:grid-cols-3">
                     <button
-                      onClick={() => handleShareWithImage()}
-                      aria-label={lang === "es" ? "Compartir score card" : "Share score card"}
-                      className="rounded-xl bg-[var(--electric)] px-3 py-2 text-xs font-bold text-white transition-all hover:bg-[var(--electric-dark)] hover:shadow-[0_0_20px_rgba(108,58,255,0.3)] cursor-pointer"
+                      type="button"
+                      onClick={() => setShowShareModal(true)}
+                      aria-label={lang === "es" ? "Abrir preview para compartir score card" : "Open score card share preview"}
+                      className="scorePrimaryShareButton inline-flex w-fit cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--electric)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[var(--electric)]/20 transition-all hover:-translate-y-0.5 hover:bg-[var(--electric-dark)] hover:shadow-[0_0_24px_rgba(108,58,255,0.38)] focus:outline-none focus:ring-2 focus:ring-[var(--electric-light)]/60"
                     >
                       📤 {lang === "es" ? "Compartir" : "Share"}
-                    </button>
-                    <button
-                      onClick={handleDownloadImage}
-                      aria-label={lang === "es" ? "Descargar imagen de score card" : "Download score card image"}
-                      className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-all hover:border-[var(--electric)]/40 cursor-pointer"
-                    >
-                      ⬇️ {lang === "es" ? "Descargar" : "Download"}
-                    </button>
-                    <button
-                      onClick={handleCopyText}
-                      aria-label={lang === "es" ? "Copiar link y texto" : "Copy link and text"}
-                      className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-all hover:border-[var(--electric)]/40 cursor-pointer"
-                    >
-                      🔗 {lang === "es" ? "Copiar" : "Copy"}
                     </button>
                   </div>
                 </div>
@@ -1851,7 +1846,7 @@ export default function HomeClient() {
                         ))}
                       </div>
 
-                      <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 sm:flex-row lg:flex-row sm:items-center sm:justify-between">
                         <p className="text-sm font-semibold text-[var(--text-primary)]">
                           {lang === "es" ? "$9 USD/mes · cancela cuando quieras" : "$9/mo · cancel anytime"}
                         </p>
@@ -1871,34 +1866,52 @@ export default function HomeClient() {
               })()}
 
               {!isCurrentPro && (
-                <section data-testid="locked-pro-benchmark-preview" className="rounded-3xl border border-amber-300/20 bg-[var(--surface)] p-5 shadow-xl shadow-black/10">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="lg:max-w-[42%]">
+                <section data-testid="locked-pro-benchmark-preview" className="relative overflow-hidden rounded-3xl border border-amber-300/20 bg-[var(--surface)] shadow-xl shadow-black/10">
+                  <div className="blurredProBenchmarkSurface pointer-events-none absolute inset-0 p-5 blur-[3px] opacity-75 select-none">
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+                      <div className="mb-5 flex items-start justify-between gap-3">
+                        <div>
+                          <div className="mb-2 h-3 w-28 rounded-full bg-amber-200/40" />
+                          <div className="h-4 w-44 rounded-full bg-white/25" />
+                        </div>
+                        <div className="rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-center">
+                          <p className="text-2xl font-black text-amber-100">Top 18%</p>
+                          <p className="text-[10px] uppercase tracking-[0.18em] text-amber-200/80">Percentile</p>
+                        </div>
+                      </div>
+                      <div className="flex h-24 items-end gap-1.5">
+                        {[22, 38, 54, 82, 68, 46, 34, 24, 14].map((height, index) => (
+                          <div key={index} className="flex-1 rounded-t border border-white/5 bg-[var(--surface-light)]" style={{ height: `${height}%`, backgroundColor: index === 4 ? "var(--electric)" : undefined }} />
+                        ))}
+                      </div>
+                      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                        <div className="h-20 rounded-xl border border-green-400/15 bg-green-400/5" />
+                        <div className="h-20 rounded-xl border border-amber-300/15 bg-amber-300/5" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="relative z-10 bg-gradient-to-r from-[var(--surface)]/95 via-[var(--surface)]/76 to-[var(--midnight)]/18 p-6 backdrop-blur-[1px]">
+                    <div className="max-w-xl">
                       <div className="mb-3 flex items-center gap-3">
                         <span className="text-xs font-bold uppercase tracking-[0.16em] text-amber-200">
                           {lang === "es" ? "Benchmark Pro" : "Pro benchmark"}
                         </span>
-                        <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-bold text-amber-100">
-                          {lang === "es" ? "Bloqueado" : "Locked"}
+                        <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-[10px] font-bold text-amber-100">
+                          🔒 {lang === "es" ? "Bloqueado" : "Locked"}
+                        </span>
+                        <span className="rounded-full border border-[var(--electric)]/25 bg-[var(--electric)]/10 px-2.5 py-1 text-[10px] font-bold text-[var(--electric-light)]">
+                          {lang === "es" ? "Incluido con Pro" : "Included with Pro"}
                         </span>
                       </div>
-                      <h3 className="text-lg font-black text-[var(--text-primary)]">
+                      <h3 className="text-xl font-black text-[var(--text-primary)]">
                         {lang === "es" ? "Comparación avanzada" : "Advanced comparison"}
                       </h3>
                       <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
                         {lang === "es"
-                          ? "Compara tu idea contra patrones similares, puntos fuertes/débiles y palancas de mejora."
-                          : "Compare your idea against similar patterns, stronger/weaker signals, and improvement levers."}
+                          ? "Desbloquea una comparación con gráfica de barras, percentil, señales fuertes/débiles y palancas concretas para subir de posición."
+                          : "Unlock a bar-chart comparison, percentile, stronger/weaker signals, and concrete levers to improve your position."}
                       </p>
-                    </div>
-
-                    <div className="min-w-0 flex-1 space-y-2 rounded-2xl border border-white/10 bg-black/20 p-4 blur-[1px]">
-                      <div className="h-2 rounded-full bg-[var(--electric)]/80" style={{ width: "82%" }} />
-                      <div className="h-2 rounded-full bg-amber-300/70" style={{ width: "64%" }} />
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        <div className="h-12 rounded-xl bg-green-400/10" />
-                        <div className="h-12 rounded-xl bg-amber-300/10" />
-                      </div>
                     </div>
                   </div>
                 </section>

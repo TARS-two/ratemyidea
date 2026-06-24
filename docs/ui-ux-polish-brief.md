@@ -1,6 +1,6 @@
 # ratemyidea.ai — UI/UX Polish Brief
 Última actualización: 2026-06-22
-Estado: brief de triage / no implementación todavía
+Estado: correcciones UI solicitadas implementadas en commit local `255b379`; pendiente push/deploy/smoke producción si Phil decide publicar.
 
 ## Objetivo de Phil
 

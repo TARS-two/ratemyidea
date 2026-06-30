@@ -1867,7 +1867,17 @@ export default function HomeClient() {
 
               {!isCurrentPro && (
                 <section data-testid="locked-pro-benchmark-preview" className="relative overflow-hidden rounded-3xl border border-amber-300/20 bg-[var(--surface)] shadow-xl shadow-black/10">
-                  <div className="proBenchmarkPreviewHero pointer-events-none relative min-h-[19rem] select-none overflow-hidden p-5">
+                  <div className="proBenchmarkPreviewHero pointer-events-none relative min-h-[25rem] select-none overflow-hidden p-5 pb-0">
+                    <div className="proBenchmarkPreviewHeader relative z-10 mb-4 flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-bold uppercase tracking-[0.16em] text-amber-200">
+                        {lang === "es" ? "Benchmark Pro" : "Pro benchmark"}
+                      </span>
+                      <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-[10px] font-bold text-amber-100">
+                        🔒 {lang === "es" ? "Bloqueado" : "Locked"}
+                      </span>
+                      <span className="rounded-full border border-[var(--electric)]/25 bg-[var(--electric)]/10 px-2.5 py-1 text-[10px] font-bold text-[var(--electric-light)]">Pro</span>
+                    </div>
+
                     <div className="mx-auto max-w-2xl rounded-2xl border border-white/10 bg-black/20 p-5 shadow-2xl shadow-black/20">
                       <div className="mb-5 flex items-start justify-between gap-3">
                         <div>
@@ -1891,22 +1901,9 @@ export default function HomeClient() {
                         <div className="h-20 rounded-xl border border-amber-300/15 bg-amber-300/5" />
                       </div>
                     </div>
-                    <div className="blurredProBenchmarkSurface absolute inset-x-0 bottom-0 h-36 bg-gradient-to-b from-transparent via-[var(--surface)]/80 to-[var(--surface)] backdrop-blur-[2px]" />
-                  </div>
 
-                  <div className="relative z-10 border-t border-white/10 bg-[var(--surface)] p-6">
-                    <div className="mx-auto max-w-xl text-center sm:text-left">
-                      <div className="mb-3 flex items-center gap-3">
-                        <span className="text-xs font-bold uppercase tracking-[0.16em] text-amber-200">
-                          {lang === "es" ? "Benchmark Pro" : "Pro benchmark"}
-                        </span>
-                        <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-[10px] font-bold text-amber-100">
-                          🔒 {lang === "es" ? "Bloqueado" : "Locked"}
-                        </span>
-                        <span className="rounded-full border border-[var(--electric)]/25 bg-[var(--electric)]/10 px-2.5 py-1 text-[10px] font-bold text-[var(--electric-light)]">
-                          {lang === "es" ? "Incluido con Pro" : "Included with Pro"}
-                        </span>
-                      </div>
+                    <div className="blurredProBenchmarkSurface absolute inset-x-0 bottom-0 h-52 bg-gradient-to-b from-transparent via-[var(--surface)]/80 to-[var(--surface)] backdrop-blur-[2px]" />
+                    <div className="relative z-10 mx-auto -mt-8 max-w-xl px-1 pb-6 text-center sm:text-left">
                       <h3 className="text-xl font-black text-[var(--text-primary)]">
                         {lang === "es" ? "Comparación avanzada" : "Advanced comparison"}
                       </h3>

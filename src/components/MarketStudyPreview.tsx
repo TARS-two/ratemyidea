@@ -83,25 +83,21 @@ export default function MarketStudyPreview({ lang, result, loading, pricing, onC
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-4xl overflow-hidden rounded-3xl border border-[var(--electric)]/30 bg-[var(--midnight)] shadow-2xl shadow-[var(--electric)]/10 animate-fade-up">
-        <div className="flex flex-col gap-4 border-b border-white/10 bg-[var(--surface)] px-5 py-5 text-center sm:flex-row sm:items-start sm:justify-between sm:px-6 sm:text-left">
-          <div className="min-w-0">
+      <div className="flex h-[100dvh] w-full max-w-4xl flex-col overflow-hidden border border-[var(--electric)]/30 bg-[var(--midnight)] shadow-2xl shadow-[var(--electric)]/10 animate-fade-up sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl">
+        <div className="relative shrink-0 border-b border-white/10 bg-[var(--surface)] px-5 py-5 text-center sm:px-6 sm:text-left">
+          <button onClick={onClose} aria-label={isEs ? "Cerrar preview" : "Close preview"} className="absolute right-4 top-4 text-xl leading-none text-[var(--text-muted)] transition-colors hover:text-white cursor-pointer">✕</button>
+          <div className="mx-auto min-w-0 max-w-2xl sm:mx-0">
             <button
               type="button"
               onClick={onClose}
-              className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs font-bold text-[var(--text-secondary)] transition-all hover:border-[var(--electric)]/40 hover:text-white sm:hidden"
+              className="marketStudyBackButton mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs font-bold text-[var(--text-secondary)] transition-all hover:border-[var(--electric)]/40 hover:text-white"
             >
               <span aria-hidden="true">←</span>
               {isEs ? "Volver al análisis básico" : "Back to basic analysis"}
             </button>
-            <div className="mb-3 flex flex-wrap items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[var(--electric-light)] sm:justify-start">
-              <span>AI Norte</span>
-              <span className="text-white/20">/</span>
-              <span>Systems over motivation</span>
-            </div>
             <h3 className="mt-2 text-2xl font-bold text-[var(--text-primary)]">
               {isEs ? "Market Study — preview del reporte PDF" : "Market Study — PDF report preview"}
             </h3>
@@ -111,44 +107,10 @@ export default function MarketStudyPreview({ lang, result, loading, pricing, onC
                 : "The Market Study runs deeper research on your idea: market context, competitors, customer segments, risks, pricing signals, and go-to-market recommendations, then packages it into a downloadable AI Norte report."}
             </p>
           </div>
-          <div className="hidden shrink-0 items-center gap-2 sm:flex">
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs font-bold text-[var(--text-secondary)] transition-all hover:border-[var(--electric)]/40 hover:text-white"
-            >
-              <span aria-hidden="true">←</span>
-              {isEs ? "Volver al análisis básico" : "Back to basic analysis"}
-            </button>
-            <button onClick={onClose} aria-label={isEs ? "Cerrar preview" : "Close preview"} className="text-xl leading-none text-[var(--text-muted)] transition-colors hover:text-white cursor-pointer">✕</button>
-          </div>
         </div>
 
-        <div className="max-h-[82vh] overflow-y-auto bg-[var(--midnight)] px-4 py-6 md:px-8">
-          <div className="mx-auto mb-5 max-w-3xl rounded-2xl border border-[var(--electric)]/25 bg-[var(--electric)]/10 p-4">
-            <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[var(--electric-light)]">
-              {isEs ? "Qué cambia vs. el análisis básico" : "What changes vs. the basic analysis"}
-            </p>
-            <div className="grid items-center gap-3 text-sm md:grid-cols-[1fr_auto_1fr]">
-              <div className="rounded-xl border border-white/10 bg-black/20 p-4">
-                <p className="font-bold text-[var(--text-primary)]">{isEs ? "Análisis básico" : "Basic analysis"}</p>
-                <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
-                  {isEs ? "Score, señales principales y riesgos iniciales." : "Score, core signals, and initial risks."}
-                </p>
-              </div>
-              <div className="text-center text-xl text-[var(--electric-light)]">→</div>
-              <div className="rounded-xl border border-amber-300/20 bg-amber-300/10 p-4">
-                <p className="font-bold text-amber-100">
-                  {isEs ? "El Market Study agrega investigación más profunda" : "Market Study adds deeper research"}
-                </p>
-                <p className="mt-1 text-xs leading-relaxed text-amber-100/80">
-                  {isEs ? "Más contexto de mercado, competencia, audiencia y go-to-market, sin publicar el método interno." : "More market, competitor, audience, and go-to-market context without exposing the internal method."}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mx-auto max-w-3xl space-y-6 rounded-[2rem] border border-white/10 bg-black/20 p-5 shadow-inner shadow-black/40 md:p-8">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--midnight)] px-4 py-6 pb-[calc(1rem+env(safe-area-inset-bottom))] md:px-8">
+          <div className="mx-auto max-w-3xl space-y-5">
             <header className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[var(--surface)] via-[var(--surface)] to-[var(--electric)]/15 p-7 text-center">
               <p className="mb-2 text-sm uppercase tracking-wider text-[var(--electric-light)]">Complete Market Study</p>
               <h4 className="text-3xl font-bold text-white">{result.ideaName}</h4>
@@ -279,7 +241,7 @@ export default function MarketStudyPreview({ lang, result, loading, pricing, onC
               : "Note: this is a generic preview based on the real PDF template. The unlocked section only uses information already produced by your basic analysis; the final Market Study is generated after purchase with research, available sources, and specific analysis."}
           </div>
 
-          <div className="sticky bottom-0 mx-auto mt-5 max-w-3xl rounded-2xl border border-white/10 bg-[var(--midnight)]/95 p-4 shadow-2xl backdrop-blur-md">
+          <div className="sticky bottom-3 mx-auto mt-5 max-w-3xl rounded-2xl border border-white/10 bg-[var(--midnight)]/95 p-3 shadow-2xl backdrop-blur-md sm:p-4">
             <button
               onClick={onCheckout}
               disabled={loading}

@@ -1867,11 +1867,13 @@ export default function HomeClient() {
 
               {!isCurrentPro && (
                 <section data-testid="locked-pro-benchmark-preview" className="relative overflow-hidden rounded-3xl border border-amber-300/20 bg-[var(--surface)] shadow-xl shadow-black/10">
-                  <div className="blurredProBenchmarkSurface pointer-events-none absolute inset-0 p-5 blur-[3px] opacity-75 select-none">
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+                  <div className="proBenchmarkPreviewHero pointer-events-none relative min-h-[19rem] select-none overflow-hidden p-5">
+                    <div className="mx-auto max-w-2xl rounded-2xl border border-white/10 bg-black/20 p-5 shadow-2xl shadow-black/20">
                       <div className="mb-5 flex items-start justify-between gap-3">
                         <div>
-                          <div className="mb-2 h-3 w-28 rounded-full bg-amber-200/40" />
+                          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-200/80">
+                            {lang === "es" ? "Comparación visible antes del blur" : "Visible comparison before blur"}
+                          </p>
                           <div className="h-4 w-44 rounded-full bg-white/25" />
                         </div>
                         <div className="rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-center">
@@ -1889,10 +1891,11 @@ export default function HomeClient() {
                         <div className="h-20 rounded-xl border border-amber-300/15 bg-amber-300/5" />
                       </div>
                     </div>
+                    <div className="blurredProBenchmarkSurface absolute inset-x-0 bottom-0 h-36 bg-gradient-to-b from-transparent via-[var(--surface)]/80 to-[var(--surface)] backdrop-blur-[2px]" />
                   </div>
 
-                  <div className="relative z-10 bg-gradient-to-r from-[var(--surface)]/95 via-[var(--surface)]/76 to-[var(--midnight)]/18 p-6 backdrop-blur-[1px]">
-                    <div className="max-w-xl">
+                  <div className="relative z-10 border-t border-white/10 bg-[var(--surface)] p-6">
+                    <div className="mx-auto max-w-xl text-center sm:text-left">
                       <div className="mb-3 flex items-center gap-3">
                         <span className="text-xs font-bold uppercase tracking-[0.16em] text-amber-200">
                           {lang === "es" ? "Benchmark Pro" : "Pro benchmark"}
@@ -2142,6 +2145,7 @@ export default function HomeClient() {
               <h3 className="font-semibold text-lg">{s.shareScore}</h3>
               <button
                 onClick={() => setShowShareModal(false)}
+                aria-label={lang === "es" ? "Cerrar preview de compartir" : "Close share preview"}
                 className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer text-xl leading-none"
               >
                 ✕
@@ -2182,15 +2186,22 @@ export default function HomeClient() {
               </label>
             </div>
 
-            {/* Share + Save buttons */}
+              {/* Share + Save buttons */}
             <div className="px-4 pb-3 space-y-2">
+              {canClaimShareCredit && (
+                <div className="shareCreditBadgeAboveCta flex justify-center">
+                  <span className="rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-xs font-semibold text-green-300">
+                    {lang === "es" ? "+1 evaluación gratis al compartir" : "+1 free evaluation after sharing"}
+                  </span>
+                </div>
+              )}
               {/* Main share button with social logos */}
               <button
                 onClick={() => handleShareWithImage()}
                 className="w-full py-4 bg-[var(--electric)] hover:bg-[var(--electric-dark)] text-white font-semibold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-3 text-base"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                {lang === "es" ? "Compartir imagen" : "Share image"}
+                {lang === "es" ? "Enviar" : "Send"}
                 <span className="flex items-center gap-2 ml-1 opacity-70">
                   {/* X */}
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
@@ -2199,11 +2210,6 @@ export default function HomeClient() {
                   {/* LinkedIn */}
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
                 </span>
-                {canClaimShareCredit && (
-                  <span className="ml-2 rounded-full bg-green-500/10 border border-green-500/30 px-2 py-0.5 text-green-300 text-xs font-semibold whitespace-nowrap">
-                    {lang === "es" ? "+1 evaluación gratis" : "+1 free evaluation"}
-                  </span>
-                )}
               </button>
 
               {/* Secondary row: Save + Copy */}

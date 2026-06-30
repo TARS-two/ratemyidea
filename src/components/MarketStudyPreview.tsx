@@ -87,9 +87,17 @@ export default function MarketStudyPreview({ lang, result, loading, pricing, onC
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="w-full max-w-4xl overflow-hidden rounded-3xl border border-[var(--electric)]/30 bg-[var(--midnight)] shadow-2xl shadow-[var(--electric)]/10 animate-fade-up">
-        <div className="flex items-start justify-between gap-4 border-b border-white/10 bg-[var(--surface)] px-6 py-5">
-          <div>
-            <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[var(--electric-light)]">
+        <div className="flex flex-col gap-4 border-b border-white/10 bg-[var(--surface)] px-5 py-5 text-center sm:flex-row sm:items-start sm:justify-between sm:px-6 sm:text-left">
+          <div className="min-w-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs font-bold text-[var(--text-secondary)] transition-all hover:border-[var(--electric)]/40 hover:text-white sm:hidden"
+            >
+              <span aria-hidden="true">←</span>
+              {isEs ? "Volver al análisis básico" : "Back to basic analysis"}
+            </button>
+            <div className="mb-3 flex flex-wrap items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[var(--electric-light)] sm:justify-start">
               <span>AI Norte</span>
               <span className="text-white/20">/</span>
               <span>Systems over motivation</span>
@@ -103,7 +111,17 @@ export default function MarketStudyPreview({ lang, result, loading, pricing, onC
                 : "The Market Study runs deeper research on your idea: market context, competitors, customer segments, risks, pricing signals, and go-to-market recommendations, then packages it into a downloadable AI Norte report."}
             </p>
           </div>
-          <button onClick={onClose} className="text-xl leading-none text-[var(--text-muted)] transition-colors hover:text-white cursor-pointer">✕</button>
+          <div className="hidden shrink-0 items-center gap-2 sm:flex">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs font-bold text-[var(--text-secondary)] transition-all hover:border-[var(--electric)]/40 hover:text-white"
+            >
+              <span aria-hidden="true">←</span>
+              {isEs ? "Volver al análisis básico" : "Back to basic analysis"}
+            </button>
+            <button onClick={onClose} aria-label={isEs ? "Cerrar preview" : "Close preview"} className="text-xl leading-none text-[var(--text-muted)] transition-colors hover:text-white cursor-pointer">✕</button>
+          </div>
         </div>
 
         <div className="max-h-[82vh] overflow-y-auto bg-[var(--midnight)] px-4 py-6 md:px-8">
@@ -146,7 +164,7 @@ export default function MarketStudyPreview({ lang, result, loading, pricing, onC
 
             <PreviewSection
               title={isEs ? "Señal del análisis básico" : "Basic analysis signal"}
-              kicker={isEs ? "desbloqueado sin investigación adicional" : "unlocked without additional research"}
+              kicker={isEs ? "desbloqueado" : "unlocked"}
               icon="📋"
             >
               <p className="leading-relaxed text-[var(--text-secondary)]">{result.summary}</p>
@@ -242,9 +260,13 @@ export default function MarketStudyPreview({ lang, result, loading, pricing, onC
 
             <PreviewSection title={isEs ? "Riesgos y veredicto" : "Risk Assessment & Verdict"} icon="⚠️">
               <div className="rounded-xl border border-white/5 bg-[var(--surface-light)] p-4">
-                <div className="mb-2 flex items-start justify-between gap-2">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <RiskBadge text={isEs ? "Valor incluido en el preview" : "Free preview value"} tone="caution" />
+                  <RiskBadge text={isEs ? "Probabilidad: media" : "Likelihood: medium"} tone="medium" />
+                  <RiskBadge text={isEs ? "Impacto: alto" : "Impact: high"} tone="high" />
+                </div>
+                <div className="mb-2">
                   <p className="text-sm font-medium text-[var(--text-primary)]">{primaryRisk}</p>
-                  <div className="flex gap-1"><RiskBadge text="L: medium" tone="medium" /><RiskBadge text="I: high" tone="high" /></div>
                 </div>
                 <p className="text-xs text-[var(--text-muted)]">💡 {isEs ? "El reporte final incluye mitigación y experimento recomendado." : "The final report includes mitigation and a recommended experiment."}</p>
               </div>
@@ -263,8 +285,22 @@ export default function MarketStudyPreview({ lang, result, loading, pricing, onC
               disabled={loading}
               className="flex w-full items-center justify-center gap-3 rounded-2xl bg-[var(--electric)] px-7 py-5 text-base font-black text-white shadow-lg shadow-[var(--electric)]/25 transition-all hover:-translate-y-0.5 hover:bg-[var(--electric-dark)] hover:shadow-[0_0_32px_rgba(108,58,255,0.45)] disabled:opacity-60 cursor-pointer glow-pulse"
             >
-              <span aria-hidden="true" className="text-lg">🛒</span>
-              <span>{loading ? (isEs ? "Abriendo checkout seguro..." : "Opening secure checkout...") : (isEs ? "Comprar Market Study" : "Buy Market Study")}</span>
+              <span aria-hidden="true" className="text-2xl">🛒</span>
+              <span className="flex flex-col leading-tight sm:flex-row sm:items-center sm:gap-1">
+                {loading ? (
+                  <span>{isEs ? "Abriendo checkout seguro..." : "Opening secure checkout..."}</span>
+                ) : isEs ? (
+                  <>
+                    <span>Comprar</span>
+                    <span>Market Study</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Buy</span>
+                    <span>Market Study</span>
+                  </>
+                )}
+              </span>
               <span className="rounded-full bg-white/15 px-3 py-1 text-sm">{marketStudyPrice}</span>
             </button>
             <p className="mt-2 text-center text-xs text-[var(--text-muted)]">
